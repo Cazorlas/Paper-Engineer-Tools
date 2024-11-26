@@ -200,7 +200,7 @@ class DataForm(Form):
             else:
                 nameEle = "ID was not found"
                 idEle = id.IntegerValue
-                zoomText = ""  # Leave zoom button empty for invalid IDs
+                zoomText = "None"  # Leave zoom button empty for invalid IDs
 
             self._dataGridView1.Rows.Add(nameEle, idEle, zoomText)
 
@@ -228,7 +228,7 @@ class DataForm(Form):
         self._Column3.Name = "Column3"
         self._Column3.Text = "Zoom"  # Set button text
         self._Column3.ToolTipText = "Click to zoom to element. \nIf element was not found, don't try to click"
-        self._Column3.UseColumnTextForButtonValue = True  # Display button text
+        self._Column3.UseColumnTextForButtonValue = False  # Display button text
 
         # Setup Form
         self.ClientSize = System.Drawing.Size(702, 384)
