@@ -1,0 +1,17 @@
+titile: Convert Grids
+
+tooltip: >-    
+    
+    Convert 3D Grids to 2D Grids and vice versa
+
+
+help_url: "https://www.youtube.com/@paper.engineer"
+
+context: 
+    any:
+        - active-plan-view
+        - active-section-view
+        - active-3d-view
+        - active-elevation-view
+
+author: Paper Engineer
