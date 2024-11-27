@@ -61,6 +61,7 @@ try:
 
 
 
+
 # Handle the case when the user cancels the operation
 except Autodesk.Revit.Exceptions.OperationCanceledException:
     pass
