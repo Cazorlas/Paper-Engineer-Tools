@@ -37,3 +37,50 @@ class ElementGeometry:
         '''
         faces = [face for face in solid.Faces]
         return faces
+    
+    @staticmethod
+    def UnionSolids(solids):
+        union = None
+        for solid in solids:
+            if union == None:
+                union = solid
+            else:
+                union = BooleanOperationsUtils.ExecuteBooleanOperation(union, solid,BooleanOperationsType.Union)
+        return union
+    
+    @staticmethod
+    def GetCentroidSolid(solid):
+        return solid.ComputeCentroid()
+    
+    @staticmethod
+    def GetBoundingBoxGeometry(geo):
+        return geo.GetBoundingBox()
+
+    @staticmethod
+    def GetMinPoint(boundingbox):
+        origin = boundingbox.Transform.Origin
+        return boundingbox.Min + origin
+    
+    @staticmethod
+    def GetMaxPoint(boundingbox):
+        origin = boundingbox.Transform.Origin
+        return boundingbox.Max + origin
+    
+    @staticmethod
+    def GetBoundingBoxElement(ele):
+        return ele.get_BoundingBox(None)
+
+    @staticmethod
+    def GetMinPointEle(boundingbox):
+        return boundingbox.Min
+
+    @staticmethod
+    def GetMaxPointEle(boundingbox):
+        return boundingbox.Max
+
+    @staticmethod
+    def GetCenterBoundingBox(boundingbox):
+        minpoint = GetMinPoint(boundingbox)
+        maxpoint = GetMaxPoint(boundingbox)
+        centerpoint = (minpoint + maxpoint)/2
+        return centerpoint
