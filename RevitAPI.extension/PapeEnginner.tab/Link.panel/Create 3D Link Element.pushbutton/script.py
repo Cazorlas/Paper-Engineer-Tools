@@ -1,110 +1,73 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import clr 
-from pyrevit import forms
-clr.AddReference('RevitAPI')
+
+
+# TODO: import library
+import clr  # Common Language Runtime for .NET
+import System
+import math  # Standard Python math library
+
+# Import necessary .NET and Revit API libraries
+from System.Collections.Generic import *
+from pyrevit import forms, revit, script
+
+from MainForm import *
+from SubForm import *
+
+clr.AddReference('ProtoGeometry')  # Dynamo's geometry proxy
+from Autodesk.DesignScript.Geometry import *  # Import everything from Dynamo's geometry
+
+clr.AddReference("RevitAPI")  # Revit API DLLs
+clr.AddReference("RevitAPIUI")  # Revit UI DLLs
+
 import Autodesk
-from Autodesk.Revit.DB import *
+from Autodesk.Revit.DB import *  # Revit API classes
+from Autodesk.Revit.UI import *  # Revit UI classes
+from Autodesk.Revit.UI.Selection import *  # For handling Revit selections
 
+clr.AddReference("RevitNodes")  # Dynamo nodes for Revit
+import Revit  # Import Revit namespace in RevitNodes
 
+clr.ImportExtensions(Revit.Elements)
+clr.ImportExtensions(Revit.GeometryConversion)
 
+clr.AddReference("RevitServices")
+import RevitServices
+from RevitServices.Persistence import DocumentManager  # Document management in Revit
+from RevitServices.Transactions import TransactionManager  # Transaction management
 
-# Import Minh Tran library
-from ModelSelection import *
-from VisuallizeGeometry import *
-from RevitUtils import *
-from ElementGeometry import *
-
+# Prepare document and other variables
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 uidoc = __revit__.ActiveUIDocument
 app = __revit__.Application
 DB = Autodesk.Revit.DB
+output = script.get_output()
+unit = doc.GetUnits()
+version = int(app.VersionNumber)
+selection = uidoc.Selection
 
-#-----------------------------Function------------------------------------------
-def GetLinkDoc():
-    linkInstances = FilteredElementCollector(doc).OfClass(RevitLinkInstance).ToElements()
-    linkDoc = []
-    linkName = []
-    for i in linkInstances:
-        linkDoc.append(i.GetLinkDocument())
-        linkName.append(i.Name)
-    return linkDoc,linkName,linkInstances
+uiviews = uidoc.GetOpenUIViews()
+uiview = [x for x in uiviews if x.ViewId == view.Id][0]
 
-def Flatten_LV3(lst):
-    return [item for sublst in lst for item in sublst]
-
-def Create3DView (threeDViewType, boundingBox, viewName):
-    newIsometric = DB.View3D.CreateIsometric(doc,threeDViewType.Id)
-    newIsometric.SetSectionBox(boundingBox)
-    nameParameter = newIsometric.LookupParameter('View Name')
-    nameParameter.Set(viewName)
+# ------Note: __revit__ = Autodesk.Revit.UI.UIApplication
+"""----------------------FUNCTION----------------------------"""
 
 
-#-----------------------------Function------------------------------------------
-# Get 3D view typee
-allViewTypes = FilteredElementCollector(doc).OfClass(ViewFamilyType)
-threeDViewTypes = []
-for viewType in allViewTypes:
-    if viewType.ViewFamily == ViewFamily.ThreeDimensional:
-        threeDViewTypes.append(viewType)
 
-# Select link file
-allLinkDoc = GetLinkDoc()
-allLinkDocDict = dict(zip(allLinkDoc[1],allLinkDoc[0]))
-selectedLinkModelName = forms.SelectFromList.show({'Link Models' : sorted(allLinkDocDict)},
-                                multiselect=False,
-                                group_selector_title='Link Model Sets',
-                                button_name='Select a Link Model')
-if not selectedLinkModelName:
-    TaskDialog.Show('No Linked Model Selected. Please Select Again.',exit = True)
+"""----------------------MAIN CODE----------------------------"""
+
+try:
+    print("123")
 
 
-for ind,name in enumerate(allLinkDoc[1]):
-    if selectedLinkModelName == name:
-        linkedRvtInstance = allLinkDoc[2][ind]
-        linkedDoc = allLinkDoc[0][ind]
-        break
-
-# Input link ID
-linkID = forms.ask_for_string(
-    default='Linked Element ID',
-    prompt='Enter a linked element ID',
-    title=None
-)
-lstlinkIDs = [int(Id) for Id in linkID.split(",")]
-linkedElements = [linkedDoc.GetElement(ElementId(Id)) for Id in lstlinkIDs]
-linkedSolids = Flatten_LV3([ElementGeometry.GetElementSolid(ele) for ele in linkedElements])
-solidUnion = ElementGeometry.UnionSolids(linkedSolids)
-solidUnionBoundingBox = ElementGeometry.GetBoundingBoxGeometry(solidUnion)
 
 
-# Đoạn transform này chỉ áp dụng cho trường hợp file link
-# Nếu dùng cho trường hợp In Model của anh bạn thì đưa trục tiếp solidUnionBoundingBox vào phần Execution ở dưới
-# Get link transform
-minPoint = ElementGeometry.GetMinPoint(solidUnionBoundingBox)
-maxPoint = ElementGeometry.GetMaxPoint(solidUnionBoundingBox)
-linkedTransform = linkedRvtInstance.GetTransform()
-transformMinPoint = linkedTransform.OfPoint(minPoint)
-transformMaxPoint = linkedTransform.OfPoint(maxPoint)
-
-# Create new bounding box after transforming 
-transformBoundingBox = BoundingBoxXYZ()
-transformBoundingBox.Min = transformMinPoint # Set new min point
-transformBoundingBox.Max = transformMaxPoint # Set new max point
+# Handle the case when the user cancels the operation
+except Autodesk.Revit.Exceptions.OperationCanceledException:
+    pass
 
 
-# VisuallizeGeometry.VisuallizePoint(doc , transformMinPoint)
-# VisuallizeGeometry.VisuallizePoint(doc , transformMaxPoint)
-
-#-----------------------------Execution-----------------------------------------
-with Transaction(doc,"Create 3D View") as t:
-    t.Start()
-
-    # Nếu muốn tạo view 3D mới thì bỏ comment ở dòng này
-    # Create3DView(threeDViewTypes[0],transformBoundingBox,"Test")
-
-    # Nếu chỉ muốn set section box cho view 3D hiện tại
-    view.SetSectionBox(transformBoundingBox)
-    t.Commit()
-
+# Handle any other exceptions and show an error message
+except Exception as ex:
+    ShowNotification("Error", "Warning: {}".format(ex))  # Display a task dialog with the error message

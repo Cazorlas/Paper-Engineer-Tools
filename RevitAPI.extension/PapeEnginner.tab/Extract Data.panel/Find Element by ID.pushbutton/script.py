@@ -132,6 +132,32 @@ def isFinite(value):
     return False
 
 
+def SelectLinkELementById(docLink, linkSelected, lstEleId):
+    """
+        Select elements in the linked file based on a list of IDs.
+
+        Parameters:
+        - docLink: Document of the linked file.
+        - linkSelected: RevitLinkInstance representing the linked file.
+        - lstEleId: List of ElementIds to select.
+    """
+
+    selReferences = []
+    for eleId in lstEleId:
+        try:
+            eleLink = docLink.GetElement(eleId)
+
+            if eleLink:
+                reference = Reference(eleLink).CreateLinkReference(linkSelected)
+                selReferences.append(reference)
+
+        except Exception as ex:
+            ShowNotification("Error", "No Element with ID {}\n{}".format(eleId, ex))
+
+    if selReferences:
+        selection.SetReferences(selReferences)
+
+
 """----------------------MAIN CODE----------------------------"""
 
 try:
@@ -203,6 +229,7 @@ try:
 
                     else:
                         ShowDataForm(docLink, lstEleId)
+                        SelectLinkELementById(docLink, linkSelected, lstEleId)
                         openForm = False
 
 
