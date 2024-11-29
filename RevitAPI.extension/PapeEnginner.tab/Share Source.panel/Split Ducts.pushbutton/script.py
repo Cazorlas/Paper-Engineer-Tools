@@ -15,6 +15,8 @@ from Autodesk.DesignScript.Geometry import *  # Import everything from Dynamo's 
 clr.AddReference("RevitAPI")  # Revit API DLLs
 clr.AddReference("RevitAPIUI")  # Revit UI DLLs
 
+from MainForm import *
+
 import Autodesk
 from Autodesk.Revit.DB import *  # Revit API classes
 from Autodesk.Revit.UI import *  # Revit UI classes
@@ -238,4 +240,3 @@ except Autodesk.Revit.Exceptions.OperationCanceledException:
 
 except Exception as ex:
     TaskDialog.Show("Error", "Warning: {}".format(ex))  # Corrected string formatting
-

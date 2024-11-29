@@ -11,7 +11,6 @@ import math  # Standard Python math library
 from System.Collections.Generic import *
 from pyrevit import forms, revit, script
 
-from MainForm import *
 from SubForm import *
 
 clr.AddReference('ProtoGeometry')  # Dynamo's geometry proxy
@@ -53,11 +52,22 @@ uiview = [x for x in uiviews if x.ViewId == view.Id][0]
 # ------Note: __revit__ = Autodesk.Revit.UI.UIApplication
 """----------------------FUNCTION----------------------------"""
 
-
-
 """----------------------MAIN CODE----------------------------"""
 
 try:
+    refLinkInstance = FilteredElementCollector(doc).OfClass(RevitLinkInstance).ToElements()
+
+    docLink = [ref.GetLinkDocument() for ref in refLinkInstance]
+
+    pathName = [i.PathName for i in docLink]
+
+    print(pathName)
+    print(50*"-")
+
+    targetFolder = forms.pick_folder()
+    if targetFolder:
+        for ref in refLinkInstance:
+            eleLink = doc.GetElement(ref.GetTypeId())
 
 
 
