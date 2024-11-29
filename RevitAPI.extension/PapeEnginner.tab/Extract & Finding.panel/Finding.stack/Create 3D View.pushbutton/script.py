@@ -11,9 +11,6 @@ import math  # Standard Python math library
 from System.Collections.Generic import *
 from pyrevit import forms, revit, script
 
-from MainForm import *
-from SubForm import *
-
 clr.AddReference('ProtoGeometry')  # Dynamo's geometry proxy
 from Autodesk.DesignScript.Geometry import *  # Import everything from Dynamo's geometry
 
@@ -54,25 +51,7 @@ uiview = [x for x in uiviews if x.ViewId == view.Id][0]
 """----------------------FUNCTION----------------------------"""
 
 
-def FilterElementExistant(document, lstEleId):
-    """Filter a list of elements to identify existing and non-existing elements"""
-    lstEle = []
-    lstNoEle = []
-
-    for id in lstEleId:
-
-        ele = document.GetElement(id)
-        if ele:
-            lstEle.append(ele)
-        else:
-            lstNoEle.append(id)
-
-    lstName = [e.Name for e in lstEle]
-
-    return lstEle, lstNoEle, lstName
-
-
-def SumBoxes(boundingBoxes,offset):
+def SumBoxes(boundingBoxes, offset):
     """
     Calculate the sum of BoundingBoxXYZ.
     Parameters:
@@ -93,7 +72,7 @@ def SumBoxes(boundingBoxes,offset):
     return bb
 
 
-def GetSumBoundingBox(references,offset=1):
+def GetSumBoundingBox(references, offset=1):
     """
     Calculate the sum of BoundingBoxXYZ from a list of References.
     Parameters:
@@ -123,27 +102,38 @@ def GetSumBoundingBox(references,offset=1):
             boundingBoxes.append(bbx)
 
     # Calculate the sum of the BoundingBox
-    return SumBoxes(boundingBoxes,offset)
+    return SumBoxes(boundingBoxes, offset)
 
 
-def Create3dView(doc):
+def Create3dView(doc, viewName):
     """
-    Create a new 3D View in the current Revit document.
+    Create a new 3D View in the current Revit document or reuse an existing one with the same name.
     Parameters:
     - doc: The current Revit document.
+    - viewName: The name of the 3D view to create or reuse.
     Returns:
-    - The newly created View3D.
+    - The View3D created or reused.
     """
-    # viewFamilyTypes = FilteredElementCollector(doc).OfClass(ViewFamilyType).ToElements()
-    viewFamily3d = FilteredElementCollector(doc).OfClass(ViewFamilyType).ToElements().Find(
-        lambda x: x.ViewFamily == ViewFamily.ThreeDimensional)
+    # Check if a 3D view with the same name already exists
+    existingView = next(
+        (v for v in FilteredElementCollector(doc).OfClass(View3D).ToElements() if v.Name == viewName),
+        None
+    )
+    if existingView:
+        return existingView  # Reuse the existing view
+
+    # Get the 3D view family type
+    viewFamily3d = FilteredElementCollector(doc).OfClass(ViewFamilyType).ToElements()
+    viewFamily3d = next((v for v in viewFamily3d if v.ViewFamily == ViewFamily.ThreeDimensional), None)
 
     if not viewFamily3d:
         raise Exception("Cannot find ViewFamilyType for 3D View.")
 
+    # Create a new 3D view
     with Transaction(doc, "Create 3D View") as t:
         t.Start()
         view3d = View3D.CreateIsometric(doc, viewFamily3d.Id)
+        view3d.Name = viewName  # Set the name of the new view
         t.Commit()
 
     return view3d
@@ -158,11 +148,14 @@ try:
     # Calculate the sum of BoundingBox from the References
     sumBox = GetSumBoundingBox(references)
 
+    # Specify the name for the 3D view
+    viewName = "3D Elements View"
+
     # Create 3D View
     if view.ViewType == ViewType.ThreeD:
         view3d = view
     else:
-        view3d = Create3dView(doc)
+        view3d = Create3dView(doc, viewName)
 
     # Set the SectionBox
     with Transaction(doc, "Set SectionBox") as t:
