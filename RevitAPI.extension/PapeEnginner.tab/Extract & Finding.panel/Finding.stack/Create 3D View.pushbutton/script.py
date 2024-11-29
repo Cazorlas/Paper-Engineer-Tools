@@ -17,6 +17,8 @@ from Autodesk.DesignScript.Geometry import *  # Import everything from Dynamo's 
 clr.AddReference("RevitAPI")  # Revit API DLLs
 clr.AddReference("RevitAPIUI")  # Revit UI DLLs
 
+from SubForm import *
+
 import Autodesk
 from Autodesk.Revit.DB import *  # Revit API classes
 from Autodesk.Revit.UI import *  # Revit UI classes
@@ -145,29 +147,34 @@ try:
     # Get the list of References from the current selection
     references = selection.GetReferences()
 
-    # Calculate the sum of BoundingBox from the References
-    sumBox = GetSumBoundingBox(references)
+    if not references:
+        ShowNotification("Error", "No Selection Element")
 
-    # Specify the name for the 3D view
-    viewName = "3D Elements View"
-
-    # Create 3D View
-    if view.ViewType == ViewType.ThreeD:
-        view3d = view
     else:
-        view3d = Create3dView(doc, viewName)
 
-    # Set the SectionBox
-    with Transaction(doc, "Set SectionBox") as t:
-        t.Start()
-        view3d.SetSectionBox(sumBox)
-        t.Commit()
+        # Calculate the sum of BoundingBox from the References
+        sumBox = GetSumBoundingBox(references)
 
-    # Switch to the 3D View after completing the transaction
-    uidoc.RequestViewChange(view3d)
-    uidoc.RefreshActiveView()
-    # If you want to Zoom to Element. Activate the line below
-    # uiview.ZoomAndCenterRectangle(sumBox.Min, sumBox.Max)
+        # Specify the name for the 3D view
+        viewName = "3D Elements View"
+
+        # Create 3D View
+        if view.ViewType == ViewType.ThreeD:
+            view3d = view
+        else:
+            view3d = Create3dView(doc, viewName)
+
+        # Set the SectionBox
+        with Transaction(doc, "Set SectionBox") as t:
+            t.Start()
+            view3d.SetSectionBox(sumBox)
+            t.Commit()
+
+        # Switch to the 3D View after completing the transaction
+        uidoc.RequestViewChange(view3d)
+        uidoc.RefreshActiveView()
+        # If you want to Zoom to Element. Activate the line below
+        # uiview.ZoomAndCenterRectangle(sumBox.Min, sumBox.Max)
 
 
 except Autodesk.Revit.Exceptions.OperationCanceledException:
