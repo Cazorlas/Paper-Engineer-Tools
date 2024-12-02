@@ -483,7 +483,7 @@ class MainForm(Form):
         pass
 
     def RadioButtonSharedCheckedChanged(self, sender, e):
-        pasa
+        pass
 
     def BtnAddLinksClick(self, sender, e):
         addFolder = forms.pick_file(file_ext='rvt')
