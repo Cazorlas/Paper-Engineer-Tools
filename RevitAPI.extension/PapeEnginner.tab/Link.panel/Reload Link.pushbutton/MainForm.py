@@ -7,6 +7,7 @@ import string
 from rpw.ui.forms import Alert
 
 from SubForm import *
+from pyrevit import forms, revit, script
 
 # Importing necessary references for Revit and Windows Forms
 clr.AddReference("RevitServices")
@@ -90,6 +91,7 @@ class MainForm(Form):
         self._headerStatus = System.Windows.Forms.ColumnHeader()
         self._headerSavePath = System.Windows.Forms.ColumnHeader()
         self._headerWorkset = System.Windows.Forms.ColumnHeader()
+        self._headerNewPath = System.Windows.Forms.ColumnHeader()
         self._groupBoxData.SuspendLayout()
         self._groupBoxPosition.SuspendLayout()
         self.SuspendLayout()
@@ -101,18 +103,20 @@ class MainForm(Form):
             [self._headerLinkName,
              self._headerStatus,
              self._headerSavePath,
+             self._headerNewPath,
              self._headerWorkset]))
-        self._listView.HoverSelection = True
         self._listView.GridLines = True
+        self._listView.HoverSelection = True
         self._listView.LabelWrap = False
-        self._listView.ShowItemToolTips = True
         self._listView.Location = System.Drawing.Point(12, 50)
         self._listView.Name = "listView"
+        self._listView.ShowItemToolTips = True
         self._listView.Size = System.Drawing.Size(430, 341)
         self._listView.TabIndex = 0
         self._listView.UseCompatibleStateImageBehavior = False
         self._listView.View = System.Windows.Forms.View.Details
         self._listView.SelectedIndexChanged += self.ListViewSelectedIndexChanged
+
         #
         # linkName
         #
@@ -392,7 +396,12 @@ class MainForm(Form):
         #
         self._headerWorkset.Text = "Workset"
         self._headerWorkset.Width = 119
+        # headerNewPath
         #
+        self._headerNewPath.Text = "New Path"
+        self._headerNewPath.Width = 89
+        #
+
         # Anchor listView
         #
         self._listView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
@@ -465,7 +474,7 @@ class MainForm(Form):
         System.Diagnostics.Process.Start("https://www.youtube.com/@paper.engineer")
 
     def BtnBrowseClick(self, sender, e):
-        pass
+        browseFolder = forms.pick_folder()
 
     def ComboBoxWorksetSelectedIndexChanged(self, sender, e):
         pass
@@ -477,7 +486,7 @@ class MainForm(Form):
         pass
 
     def BtnAddLinksClick(self, sender, e):
-        pass
+        addFolder = forms.pick_file(file_ext='rvt')
 
     def BtnReloadFromClick(self, sender, e):
         pass

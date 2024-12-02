@@ -91,15 +91,15 @@ try:
 
     # Hiển thị thông tin
 
-    print("Path Names: ", pathName)
-    print("-" * 50)
-    print("Names: ", nameLink)
-    print("-" * 50)
-    print("Statuses: ", statusLoad)
-    print("-" * 50)
-    print("Reference Types: ", referenceType)
-    print("-" * 50)
-    print("Workset: ", workset)
+    # print("Path Names: ", pathName)
+    # print("-" * 50)
+    # print("Names: ", nameLink)
+    # print("-" * 50)
+    # print("Statuses: ", statusLoad)
+    # print("-" * 50)
+    # print("Reference Types: ", referenceType)
+    # print("-" * 50)
+    # print("Workset: ", workset)
 
     # targetFolder = forms.pick_folder()
     # if targetFolder:
