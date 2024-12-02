@@ -12,6 +12,7 @@ from System.Collections.Generic import *
 from pyrevit import forms, revit, script
 
 from SubForm import *
+from MainForm import MainForm
 
 clr.AddReference('ProtoGeometry')  # Dynamo's geometry proxy
 from Autodesk.DesignScript.Geometry import *  # Import everything from Dynamo's geometry
@@ -55,19 +56,58 @@ uiview = [x for x in uiviews if x.ViewId == view.Id][0]
 """----------------------MAIN CODE----------------------------"""
 
 try:
+    # Thu thập các RevitLinkInstance
     refLinkInstance = FilteredElementCollector(doc).OfClass(RevitLinkInstance).ToElements()
 
-    docLink = [ref.GetLinkDocument() for ref in refLinkInstance]
+    # Danh sách lưu thông tin
+    pathName = []
+    nameLink = []
+    statusLoad = []
+    referenceType = []
+    workset = []
 
-    pathName = [i.PathName for i in docLink]
+    for ref in refLinkInstance:
+        # Lấy RevitLinkType từ RevitLinkInstance
+        linkType = doc.GetElement(ref.GetTypeId())
 
-    print(pathName)
-    print(50*"-")
+        docLink = ref.GetLinkDocument()
 
-    targetFolder = forms.pick_folder()
-    if targetFolder:
-        for ref in refLinkInstance:
-            eleLink = doc.GetElement(ref.GetTypeId())
+        pathName.append(docLink.PathName if docLink is not None else "Unknown Path")
+
+        # Lấy tên liên kết
+        nameLink.append(linkType.LookupParameter("Type Name").AsString())
+
+        # Trạng thái tải
+        statusLoad.append("Loaded" if docLink is not None else "Unloaded")
+
+        # Worsket
+        workset.append(linkType.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM))
+
+        # Loại tham chiếu (Reference Type: Overlay/Attachment)
+        if hasattr(linkType, "AttachmentType"):
+            referenceType.append("Overlay" if linkType.AttachmentType == AttachmentType.Overlay else "Attachment")
+        else:
+            referenceType.append("Unknown")
+
+    # Hiển thị thông tin
+
+    print("Path Names: ", pathName)
+    print("-" * 50)
+    print("Names: ", nameLink)
+    print("-" * 50)
+    print("Statuses: ", statusLoad)
+    print("-" * 50)
+    print("Reference Types: ", referenceType)
+    print("-" * 50)
+    print("Workset: ", workset)
+
+    # targetFolder = forms.pick_folder()
+    # if targetFolder:
+    #     for ref in refLinkInstance:
+    #         eleLink = doc.GetElement(ref.GetTypeId())
+
+    f = MainForm()
+    f.ShowDialog()
 
 
 
