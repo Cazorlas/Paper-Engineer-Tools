@@ -52,7 +52,12 @@ comboLst = ["None"]
 
 
 class MainForm(Form):
-    def __init__(self):
+    def __init__(self, linkName, status, savedPath, workset):
+        self.linkName = linkName
+        self.status = status
+        self.savedPath = savedPath
+        self.workset = workset
+
         self.InitializeComponent()
 
     def InitializeComponent(self):
@@ -117,18 +122,6 @@ class MainForm(Form):
         self._listView.View = System.Windows.Forms.View.Details
         self._listView.SelectedIndexChanged += self.ListViewSelectedIndexChanged
 
-        #
-        # linkName
-        #
-        self._linkName.DisplayIndex = 0
-        self._linkName.Text = "Link Name"
-        self._linkName.Width = 307
-        #
-        # linkStatus
-        #
-        self._linkStatus.DisplayIndex = 1
-        self._linkStatus.Text = "Link Status"
-        self._linkStatus.Width = 284
         #
         # checkBoxSelectAll
         #
@@ -486,7 +479,14 @@ class MainForm(Form):
         pass
 
     def BtnAddLinksClick(self, sender, e):
-        addFolder = forms.pick_file(file_ext='rvt')
+        # addFolder = forms.pick_file(files_filter='(*.rvt)''(*.dwg)',multi_file=True)
+        addFolder = forms.pick_file(
+            files_filter='All Files (*.*)|*.*|'
+                         'Excel Workbook (*.xlsx)|*.xlsx|'
+                         'Excel 97-2003 Workbook (*.xls)|*.xls|'
+                         'RVT Files (*.rvt)|*.rvt',
+            multi_file=True
+        )
 
     def BtnReloadFromClick(self, sender, e):
         pass

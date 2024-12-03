@@ -59,55 +59,37 @@ try:
     # Thu thập các RevitLinkInstance
     refLinkInstance = FilteredElementCollector(doc).OfClass(RevitLinkInstance).ToElements()
 
-    # Danh sách lưu thông tin
-    pathName = []
-    nameLink = []
-    statusLoad = []
-    referenceType = []
-    workset = []
+    linkType = [doc.GetElement(ref.GetTypeId()) for ref in refLinkInstance]
+    docLink = [ref.GetLinkDocument() for ref in refLinkInstance]
 
-    for ref in refLinkInstance:
-        # Lấy RevitLinkType từ RevitLinkInstance
-        linkType = doc.GetElement(ref.GetTypeId())
+    pathName = [i.PathName if i is not None else "Unknown Path" for i in docLink]
 
-        docLink = ref.GetLinkDocument()
+    nameLink = [link.LookupParameter("Type Name").AsString() for link in linkType]
 
-        pathName.append(docLink.PathName if docLink is not None else "Unknown Path")
+    statusLoad = ["Loaded" if i is not None else "Unloaded" for i in docLink]
 
-        # Lấy tên liên kết
-        nameLink.append(linkType.LookupParameter("Type Name").AsString())
+    workset = [link.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM) for link in linkType]
+    worksetName = [i.AsValueString() for i in workset]
 
-        # Trạng thái tải
-        statusLoad.append("Loaded" if docLink is not None else "Unloaded")
+    referenceType = [
+        "Overlay" if hasattr(link, "AttachmentType") and link.AttachmentType == AttachmentType.Overlay
+        else "Attachment" if hasattr(link, "AttachmentType")
+        else "Unknown"
+        for link in linkType
+    ]
 
-        # Worsket
-        workset.append(linkType.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM))
+    """------------RUN FORM----------"""
+    openForm = True
+    while openForm:
+        f = MainForm(nameLink, statusLoad, pathName, worksetName)
+        f.ShowDialog()
 
-        # Loại tham chiếu (Reference Type: Overlay/Attachment)
-        if hasattr(linkType, "AttachmentType"):
-            referenceType.append("Overlay" if linkType.AttachmentType == AttachmentType.Overlay else "Attachment")
-        else:
-            referenceType.append("Unknown")
+        # User cancel
+        if f.DialogResult != System.Windows.Forms.DialogResult.OK:
+            break
 
-    # Hiển thị thông tin
+        elif f.DialogResult == System.Windows.Forms.DialogResult.OK:
 
-    # print("Path Names: ", pathName)
-    # print("-" * 50)
-    # print("Names: ", nameLink)
-    # print("-" * 50)
-    # print("Statuses: ", statusLoad)
-    # print("-" * 50)
-    # print("Reference Types: ", referenceType)
-    # print("-" * 50)
-    # print("Workset: ", workset)
-
-    # targetFolder = forms.pick_folder()
-    # if targetFolder:
-    #     for ref in refLinkInstance:
-    #         eleLink = doc.GetElement(ref.GetTypeId())
-
-    f = MainForm()
-    f.ShowDialog()
 
 
 
