@@ -89,6 +89,7 @@ try:
             break
 
         elif f.DialogResult == System.Windows.Forms.DialogResult.OK:
+            openForm = False
 
 
 

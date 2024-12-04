@@ -104,6 +104,8 @@ class MainForm(Form):
         # listView
         #
         self._listView.CheckBoxes = True
+        self._listView.MultiSelect = True
+        self._listView.FullRowSelect = True
         self._listView.Columns.AddRange(System.Array[System.Windows.Forms.ColumnHeader](
             [self._headerLinkName,
              self._headerStatus,
@@ -121,6 +123,14 @@ class MainForm(Form):
         self._listView.UseCompatibleStateImageBehavior = False
         self._listView.View = System.Windows.Forms.View.Details
         self._listView.SelectedIndexChanged += self.ListViewSelectedIndexChanged
+
+        # Gắn dữ liệu vào ListView
+        for i in range(len(self.linkName)):
+            item = System.Windows.Forms.ListViewItem(self.linkName[i])  # Cột đầu tiên (Link Name)
+            item.SubItems.Add(self.status[i])  # Cột thứ hai (Status)
+            item.SubItems.Add(self.savedPath[i])  # Cột thứ ba (Saved Path)
+            item.SubItems.Add(self.workset[i])  # Cột thứ tư (Workset)
+            self._listView.Items.Add(item)
 
         #
         # checkBoxSelectAll
@@ -455,7 +465,12 @@ class MainForm(Form):
         self.PerformLayout()
 
     def CheckBoxSelectAllCheckedChanged(self, sender, e):
-        pass
+        # Kiểm tra trạng thái của checkbox Select All
+        isChecked = self._checkBoxSelectAll.Checked
+
+        # Lặp qua tất cả các item trong ListView và thay đổi trạng thái checkbox
+        for item in self._listView.Items:
+            item.Checked = isChecked  # Đánh dấu hoặc bỏ đánh dấu các checkbox
 
     def TextBoxFindTextChanged(self, sender, e):
         pass
