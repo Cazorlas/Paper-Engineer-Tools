@@ -113,7 +113,6 @@ class MainForm(Form):
              self._headerNewPath,
              self._headerWorkset]))
         self._listView.GridLines = True
-        self._listView.HoverSelection = True
         self._listView.LabelWrap = False
         self._listView.Location = System.Drawing.Point(12, 50)
         self._listView.Name = "listView"
@@ -465,7 +464,8 @@ class MainForm(Form):
         self.PerformLayout()
 
     def CheckBoxSelectAllCheckedChanged(self, sender, e):
-        # Kiểm tra trạng thái của checkbox Select All
+        """List View"""
+        # Status of checkbox
         isChecked = self._checkBoxSelectAll.Checked
 
         # Lặp qua tất cả các item trong ListView và thay đổi trạng thái checkbox

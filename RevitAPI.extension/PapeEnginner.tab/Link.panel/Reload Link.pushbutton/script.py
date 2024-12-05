@@ -78,18 +78,22 @@ try:
         for link in linkType
     ]
 
+    # worksetCollector = FilteredWorksetCollector(doc)
+
+    # print(worksetName)
+
     """------------RUN FORM----------"""
-    openForm = True
-    while openForm:
-        f = MainForm(nameLink, statusLoad, pathName, worksetName)
-        f.ShowDialog()
-
-        # User cancel
-        if f.DialogResult != System.Windows.Forms.DialogResult.OK:
-            break
-
-        elif f.DialogResult == System.Windows.Forms.DialogResult.OK:
-            openForm = False
+    # openForm = True
+    # while openForm:
+    #     f = MainForm(nameLink, statusLoad, pathName, worksetName)
+    #     f.ShowDialog()
+    #
+    #     # User cancel
+    #     if f.DialogResult != System.Windows.Forms.DialogResult.OK:
+    #         break
+    #
+    #     elif f.DialogResult == System.Windows.Forms.DialogResult.OK:
+    #         openForm = False
 
 
 
