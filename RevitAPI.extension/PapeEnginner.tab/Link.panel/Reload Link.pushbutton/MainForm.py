@@ -52,11 +52,15 @@ comboLst = ["None"]
 
 
 class MainForm(Form):
-    def __init__(self, linkName, status, savedPath, workset):
+    def __init__(self, linkName, status, savedPath, linkWorkset, worksetName):
         self.linkName = linkName
         self.status = status
         self.savedPath = savedPath
-        self.workset = workset
+        self.linkWorkset = linkWorkset
+        self.worksetName = list(worksetName)
+
+        self.browseFolder = None
+        self.addRVTFile = None
 
         self.InitializeComponent()
 
@@ -121,6 +125,7 @@ class MainForm(Form):
         self._listView.TabIndex = 0
         self._listView.UseCompatibleStateImageBehavior = False
         self._listView.View = System.Windows.Forms.View.Details
+        self._listView.Resize += self.ListViewResize
         self._listView.SelectedIndexChanged += self.ListViewSelectedIndexChanged
 
         # Gắn dữ liệu vào ListView
@@ -128,7 +133,7 @@ class MainForm(Form):
             item = System.Windows.Forms.ListViewItem(self.linkName[i])  # Cột đầu tiên (Link Name)
             item.SubItems.Add(self.status[i])  # Cột thứ hai (Status)
             item.SubItems.Add(self.savedPath[i])  # Cột thứ ba (Saved Path)
-            item.SubItems.Add(self.workset[i])  # Cột thứ tư (Workset)
+            item.SubItems.Add(self.linkWorkset[i])  # Cột thứ tư (Workset)
             self._listView.Items.Add(item)
 
         #
@@ -212,11 +217,8 @@ class MainForm(Form):
         #
         self._comboBoxWorkset.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         self._comboBoxWorkset.FormattingEnabled = True
-        self._comboBoxWorkset.Items.AddRange(System.Array[System.Object](
-            ["A",
-             "B",
-             "C",
-             "D"]))
+        self._comboBoxWorkset.Items.AddRange(System.Array[System.Object](self.worksetName))
+
         self._comboBoxWorkset.Location = System.Drawing.Point(6, 87)
         self._comboBoxWorkset.Name = "comboBoxWorkset"
         self._comboBoxWorkset.Size = System.Drawing.Size(182, 23)
@@ -478,11 +480,24 @@ class MainForm(Form):
     def ListViewSelectedIndexChanged(self, sender, e):
         pass
 
+    def ListViewResize(self, sender, e):
+        """Ensure al the column will be fulfilled in the list view"""
+        # Calculate the width of each column
+        totalWidth = self._listView.ClientSize.Width
+        colCount = len(self._listView.Columns)
+        if colCount > 0:
+            colWidth = totalWidth // colCount
+            # Set width for each column
+            for column in self._listView.Columns:
+                column.Width = colWidth
+
     def LinkHelpLinkClicked(self, sender, e):
         System.Diagnostics.Process.Start("https://www.youtube.com/@paper.engineer")
 
     def BtnBrowseClick(self, sender, e):
-        browseFolder = forms.pick_folder()
+        self.browseFolder = forms.pick_folder()
+
+        return self.browseFolder
 
     def ComboBoxWorksetSelectedIndexChanged(self, sender, e):
         pass
@@ -495,13 +510,20 @@ class MainForm(Form):
 
     def BtnAddLinksClick(self, sender, e):
         # addFolder = forms.pick_file(files_filter='(*.rvt)''(*.dwg)',multi_file=True)
-        addFolder = forms.pick_file(
-            files_filter='All Files (*.*)|*.*|'
-                         'Excel Workbook (*.xlsx)|*.xlsx|'
-                         'Excel 97-2003 Workbook (*.xls)|*.xls|'
-                         'RVT Files (*.rvt)|*.rvt',
+        # addFolder = forms.pick_file(
+        #     files_filter='All Files (*.*)|*.*|'
+        #                  'Excel Workbook (*.xlsx)|*.xlsx|'
+        #                  'Excel 97-2003 Workbook (*.xls)|*.xls|'
+        #                  'RVT Files (*.rvt)|*.rvt',
+        #     multi_file=True
+        # )
+
+        self.addRVTFile = forms.pick_file(
+            files_filter='RVT Files (*.rvt)|*.rvt',
             multi_file=True
         )
+
+        return self.addRVTFile
 
     def BtnReloadFromClick(self, sender, e):
         pass

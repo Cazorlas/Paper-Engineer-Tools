@@ -52,6 +52,8 @@ uiview = [x for x in uiviews if x.ViewId == view.Id][0]
 
 # ------Note: __revit__ = Autodesk.Revit.UI.UIApplication
 """----------------------FUNCTION----------------------------"""
+def SetWorkset():
+    pass
 
 """----------------------MAIN CODE----------------------------"""
 
@@ -60,16 +62,18 @@ try:
     refLinkInstance = FilteredElementCollector(doc).OfClass(RevitLinkInstance).ToElements()
 
     linkType = [doc.GetElement(ref.GetTypeId()) for ref in refLinkInstance]
+    externalFileRef = [link.GetExternalFileReference() for link in linkType]
     docLink = [ref.GetLinkDocument() for ref in refLinkInstance]
 
-    pathName = [i.PathName if i is not None else "Unknown Path" for i in docLink]
+    # pathName = [i.PathName if i is not None else "Unknown Path" for i in linkType]
+    pathName = [(ModelPathUtils.ConvertModelPathToUserVisiblePath(i.GetAbsolutePath())) for i in externalFileRef]
 
     nameLink = [link.LookupParameter("Type Name").AsString() for link in linkType]
 
     statusLoad = ["Loaded" if i is not None else "Unloaded" for i in docLink]
 
-    workset = [link.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM) for link in linkType]
-    worksetName = [i.AsValueString() for i in workset]
+    linkWorkset = [link.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM) for link in linkType]
+    linkWorksetName = [i.AsValueString() for i in linkWorkset]
 
     referenceType = [
         "Overlay" if hasattr(link, "AttachmentType") and link.AttachmentType == AttachmentType.Overlay
@@ -80,23 +84,20 @@ try:
 
     worksetCollector = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset).ToWorksets()
     # Lấy tên các Workset hoặc trả về rỗng nếu không có Workset
-    nameWorkset = [i.Name for i in worksetCollector] if worksetCollector else []
-
-    # In danh sách tên Workset ra màn hình console
-    print(nameWorkset)
+    worksetName = [i.Name for i in worksetCollector] if worksetCollector else ["Not a working share file"]
 
     """------------RUN FORM----------"""
-    # openForm = True
-    # while openForm:
-    #     f = MainForm(nameLink, statusLoad, pathName, worksetName)
-    #     f.ShowDialog()
-    #
-    #     # User cancel
-    #     if f.DialogResult != System.Windows.Forms.DialogResult.OK:
-    #         break
-    #
-    #     elif f.DialogResult == System.Windows.Forms.DialogResult.OK:
-    #         openForm = False
+    openForm = True
+    while openForm:
+        f = MainForm(nameLink, statusLoad, pathName, linkWorksetName, worksetName)
+        f.ShowDialog()
+
+        # User cancel
+        if f.DialogResult != System.Windows.Forms.DialogResult.OK:
+            break
+
+        elif f.DialogResult == System.Windows.Forms.DialogResult.OK:
+            openForm = False
 
 
 
