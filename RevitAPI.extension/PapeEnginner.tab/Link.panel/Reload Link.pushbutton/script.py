@@ -78,9 +78,12 @@ try:
         for link in linkType
     ]
 
-    # worksetCollector = FilteredWorksetCollector(doc)
+    worksetCollector = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset).ToWorksets()
+    # Lấy tên các Workset hoặc trả về rỗng nếu không có Workset
+    nameWorkset = [i.Name for i in worksetCollector] if worksetCollector else []
 
-    # print(worksetName)
+    # In danh sách tên Workset ra màn hình console
+    print(nameWorkset)
 
     """------------RUN FORM----------"""
     # openForm = True
