@@ -45,6 +45,7 @@ output = script.get_output()
 unit = doc.GetUnits()
 version = int(app.VersionNumber)
 selection = uidoc.Selection
+currentUser = app.Username
 
 uiviews = uidoc.GetOpenUIViews()
 uiview = [x for x in uiviews if x.ViewId == view.Id][0]
@@ -156,7 +157,7 @@ try:
         sumBox = GetSumBoundingBox(references)
 
         # Specify the name for the 3D view
-        viewName = "3D Elements View"
+        viewName = "3D - {}".format(currentUser)
 
         # Create 3D View
         if view.ViewType == ViewType.ThreeD:
