@@ -147,7 +147,7 @@ def Create3dView(doc, viewName):
 try:
     # Get the list of References from the current selection
     references = selection.GetReferences()
-
+    # references = selection.GetElementIds()
     if not references:
         ShowNotification("Error", "No Selection Element")
 
