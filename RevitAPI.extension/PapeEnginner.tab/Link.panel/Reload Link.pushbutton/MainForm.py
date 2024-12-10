@@ -59,6 +59,7 @@ class MainForm(Form):
         self.linkWorkset = linkWorkset
         self.worksetName = list(worksetName)
 
+        self.originalItems = []  # Lưu danh sách gốc
         self.browseFolder = None
         self.addRVTFile = None
 
@@ -135,6 +136,7 @@ class MainForm(Form):
             item.SubItems.Add(self.savedPath[i])  # Cột thứ ba (Saved Path)
             item.SubItems.Add(self.linkWorkset[i])  # Cột thứ tư (Workset)
             self._listView.Items.Add(item)
+            self.originalItems.append(item) # Lưu item gốc
 
         #
         # checkBoxSelectAll
@@ -475,7 +477,19 @@ class MainForm(Form):
             item.Checked = isChecked  # Đánh dấu hoặc bỏ đánh dấu các checkbox
 
     def TextBoxFindTextChanged(self, sender, e):
-        pass
+        # Lấy giá trị tìm kiếm từ TextBox
+        searchText = self._textBoxFind.Text.strip().lower()
+
+        # Xóa tất cả các mục hiện tại trong ListView
+        self._listView.Items.Clear()
+
+        if not searchText:  # Nếu TextBox trống, khôi phục lại toàn bộ danh sách
+            for item in self.originalItems:
+                self._listView.Items.Add(item)
+        else:  # Chỉ hiển thị các mục khớp với điều kiện
+            for item in self.originalItems:
+                if item.Text.lower().startswith(searchText):
+                    self._listView.Items.Add(item)
 
     def ListViewSelectedIndexChanged(self, sender, e):
         pass
