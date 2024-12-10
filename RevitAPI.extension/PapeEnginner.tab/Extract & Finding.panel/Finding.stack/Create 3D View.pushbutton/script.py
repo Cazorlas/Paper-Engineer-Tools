@@ -126,8 +126,8 @@ def Create3dView(doc, viewName):
         return existingView  # Reuse the existing view
 
     # Get the 3D view family type
-    viewFamily3d = FilteredElementCollector(doc).OfClass(ViewFamilyType).ToElements()
-    viewFamily3d = next((v for v in viewFamily3d if v.ViewFamily == ViewFamily.ThreeDimensional), None)
+    viewFamily3d = FilteredElementCollector(doc).OfClass(ViewFamilyType).ToElements().Find(
+        lambda x: x.ViewFamily == ViewFamily.ThreeDimensional)
 
     if not viewFamily3d:
         raise Exception("Cannot find ViewFamilyType for 3D View.")
