@@ -572,29 +572,24 @@ class MainForm(Form):
 
                     if isinstance(linkType, RevitLinkType):
                         # Mở giao dịch để reload liên kết
-                        with Transaction(doc, "Reload Link: {}".format(linkName)):
-                            linkType.Reload()
+
+                        linkType.Reload()
 
                 tg.Assimilate()
         except Exception as ex:
             TaskDialog.Show("Error", "An error occurred: {}".format(ex))
 
-
     def BtnUnloadClick(self, sender, e):
         pass
-
 
     def BtnRemoveClick(self, sender, e):
         pass
 
-
     def BtnSetWorksetClick(self, sender, e):
         pass
 
-
     def BtnOKClick(self, sender, e):
         pass
-
 
     def ButtonCloseClick(self, sender, e):
         pass
