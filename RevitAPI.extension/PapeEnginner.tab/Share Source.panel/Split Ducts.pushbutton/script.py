@@ -209,12 +209,12 @@ try:
                     # Begin transaction to break the duct
                     t = Transaction(doc, "Split Duct")
                     t.Start()
-                    scale = 0
+                    scale = float(0)
                     for i in range(segments_to_create):
                         if i == 0:
-                            scale += desired_length + duct_thickness / 2
+                            scale += float(desired_length) + float(duct_thickness / 2)
                         else:
-                            scale += desired_length + duct_thickness
+                            scale += float(desired_length) + float(duct_thickness)
 
                         cut_point = start_point + (duct_curve.Direction * scale)
                         # vectorDist = duct_curve.Direction.Multiply(scale /304.8)

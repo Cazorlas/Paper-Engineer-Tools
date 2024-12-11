@@ -543,7 +543,14 @@ class MainForm(Form):
         pass
 
     def BtnReloadClick(self, sender, e):
-        pass
+        selectedItems = [item for item in self._listView.Items if item.Checked]
+
+        if not selectedItems:
+            return
+
+        with Transaction(doc, "Reload Links") as t:
+            t.Start()
+
 
     def BtnUnloadClick(self, sender, e):
         pass
