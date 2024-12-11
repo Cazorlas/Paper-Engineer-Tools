@@ -52,12 +52,13 @@ comboLst = ["None"]
 
 
 class MainForm(Form):
-    def __init__(self, linkName, status, savedPath, linkWorkset, worksetName):
+    def __init__(self, linkName, status, savedPath, linkWorkset, worksetName, linkInstance):
         self.linkName = linkName
         self.status = status
         self.savedPath = savedPath
         self.linkWorkset = linkWorkset
         self.worksetName = list(worksetName)
+        self.linkInstance = linkInstance
 
         self.originalItems = []  # Lưu danh sách gốc
         self.browseFolder = None
@@ -136,7 +137,7 @@ class MainForm(Form):
             item.SubItems.Add(self.savedPath[i])  # Cột thứ ba (Saved Path)
             item.SubItems.Add(self.linkWorkset[i])  # Cột thứ tư (Workset)
             self._listView.Items.Add(item)
-            self.originalItems.append(item) # Lưu item gốc
+            self.originalItems.append(item)  # Lưu item gốc
 
         #
         # checkBoxSelectAll
@@ -548,9 +549,28 @@ class MainForm(Form):
         if not selectedItems:
             return
 
-        with Transaction(doc, "Reload Links") as t:
-            t.Start()
+        with TransactionGroup(doc, "Reload Links") as tg:
+            try:
+                tg.Start()
 
+                for i in selectedItems:
+                    linkName = i.Text
+                    # Tìm link instance dựa trên tên type name
+                    refLinkInstance = next((link for link in self.linkInstance
+                                            if doc.GetElement(link.GetTypeId()).LookupParameter(
+                        "Type Name").AsString() == linkName), None)
+
+                    if refLinkInstance is not None:
+                        # Lấy RevitLinkType từ instance
+                        refLinkType = doc.GetElement(refLinkInstance.GetTypeId())
+
+                        # Kiểm tra xem refLinkType có phải là RevitLinkType không
+                        if isinstance(refLinkType, RevitLinkType):
+                            refLinkType.Reload()
+
+                tg.Assimilate()
+            except Exception as ex:
+                TaskDialog.Show("Error", "Warning: {}".format(ex))
 
     def BtnUnloadClick(self, sender, e):
         pass

@@ -52,8 +52,11 @@ uiview = [x for x in uiviews if x.ViewId == view.Id][0]
 
 # ------Note: __revit__ = Autodesk.Revit.UI.UIApplication
 """----------------------FUNCTION----------------------------"""
+
+
 def SetWorkset():
     pass
+
 
 """----------------------MAIN CODE----------------------------"""
 
@@ -89,7 +92,7 @@ try:
     """------------RUN FORM----------"""
     openForm = True
     while openForm:
-        f = MainForm(nameLink, statusLoad, pathName, linkWorksetName, worksetName)
+        f = MainForm(nameLink, statusLoad, pathName, linkWorksetName, worksetName, refLinkInstance)
         f.ShowDialog()
 
         # User cancel
