@@ -92,7 +92,7 @@ try:
     """------------RUN FORM----------"""
     openForm = True
     while openForm:
-        f = MainForm(nameLink, statusLoad, pathName, linkWorksetName, worksetName, refLinkInstance)
+        f = MainForm(nameLink, statusLoad, pathName, linkWorksetName, worksetName)
         f.ShowDialog()
 
         # User cancel

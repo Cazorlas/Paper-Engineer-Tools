@@ -52,13 +52,12 @@ comboLst = ["None"]
 
 
 class MainForm(Form):
-    def __init__(self, linkName, status, savedPath, linkWorkset, worksetName, linkInstance):
+    def __init__(self, linkName, status, savedPath, linkWorkset, worksetName):
         self.linkName = linkName
         self.status = status
         self.savedPath = savedPath
         self.linkWorkset = linkWorkset
         self.worksetName = list(worksetName)
-        self.linkInstance = linkInstance
 
         self.originalItems = []  # Lưu danh sách gốc
         self.browseFolder = None
@@ -544,45 +543,58 @@ class MainForm(Form):
         pass
 
     def BtnReloadClick(self, sender, e):
+        # Lấy danh sách các mục được chọn từ ListView
         selectedItems = [item for item in self._listView.Items if item.Checked]
 
         if not selectedItems:
+            TaskDialog.Show("Warning", "No link selected for reload.")
             return
 
-        with TransactionGroup(doc, "Reload Links") as tg:
-            try:
+        try:
+            # Sử dụng TransactionGroup để nhóm các thay đổi
+            with TransactionGroup(doc, "Reload Links") as tg:
                 tg.Start()
 
                 for i in selectedItems:
                     linkName = i.Text
-                    # Tìm link instance dựa trên tên type name
-                    refLinkInstance = next((link for link in self.linkInstance
-                                            if doc.GetElement(link.GetTypeId()).LookupParameter(
-                        "Type Name").AsString() == linkName), None)
 
-                    if refLinkInstance is not None:
-                        # Lấy RevitLinkType từ instance
-                        refLinkType = doc.GetElement(refLinkInstance.GetTypeId())
+                    # Tìm RevitLinkInstance dựa trên tên
+                    refLinkInstance = next(
+                        (link for link in FilteredElementCollector(doc).OfClass(RevitLinkInstance).ToElements()
+                         if doc.GetElement(link.GetTypeId()).LookupParameter("Type Name").AsString() == linkName), None)
 
-                        # Kiểm tra xem refLinkType có phải là RevitLinkType không
-                        if isinstance(refLinkType, RevitLinkType):
-                            refLinkType.Reload()
+                    if refLinkInstance is None:
+                        TaskDialog.Show("Warning", "Link instance not found for: {}".format(linkName))
+                        continue  # Bỏ qua nếu không tìm thấy
+
+                    # Lấy RevitLinkType từ instance
+                    linkType = doc.GetElement(refLinkInstance.GetTypeId())
+
+                    if isinstance(linkType, RevitLinkType):
+                        # Mở giao dịch để reload liên kết
+                        with Transaction(doc, "Reload Link: {}".format(linkName)):
+                            linkType.Reload()
 
                 tg.Assimilate()
-            except Exception as ex:
-                TaskDialog.Show("Error", "Warning: {}".format(ex))
+        except Exception as ex:
+            TaskDialog.Show("Error", "An error occurred: {}".format(ex))
+
 
     def BtnUnloadClick(self, sender, e):
         pass
 
+
     def BtnRemoveClick(self, sender, e):
         pass
+
 
     def BtnSetWorksetClick(self, sender, e):
         pass
 
+
     def BtnOKClick(self, sender, e):
         pass
+
 
     def ButtonCloseClick(self, sender, e):
         pass
