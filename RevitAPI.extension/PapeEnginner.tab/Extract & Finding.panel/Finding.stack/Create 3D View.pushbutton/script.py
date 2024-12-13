@@ -157,7 +157,7 @@ try:
         sumBox = GetSumBoundingBox(references)
 
         # Specify the name for the 3D view
-        viewName = "3D - {}".format(currentUser)
+        viewName = "{3D - " + currentUser + "}"
 
         # Create 3D View
         if view.ViewType == ViewType.ThreeD:
