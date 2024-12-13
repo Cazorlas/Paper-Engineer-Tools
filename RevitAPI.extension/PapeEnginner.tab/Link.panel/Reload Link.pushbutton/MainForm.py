@@ -560,12 +560,17 @@ class MainForm(Form):
                 (link for link in FilteredElementCollector(doc).OfClass(RevitLinkInstance).ToElements()
                  if doc.GetElement(link.GetTypeId()).LookupParameter("Type Name").AsString() == linkName), None)
 
-            lstTest.append(linkName)
+            lstTest.append(refLinkInstance)
 
         print(lstTest)
 
+        for item in selectedItems:
+            item.Checked = False  # Bỏ chọn để người dùng có thể chọn lại
+            # Thêm logic cập nhật trạng thái nếu cần, ví dụ:
+            # item.SubItems[1].Text = "Reloaded"
+
+        # TransactionGroup để xử lý các thay đổi
         # try:
-        #     # Sử dụng TransactionGroup để nhóm các thay đổi
         #     with TransactionGroup(doc, "Reload Links") as tg:
         #         tg.Start()
         #
@@ -578,21 +583,29 @@ class MainForm(Form):
         #                  if doc.GetElement(link.GetTypeId()).LookupParameter("Type Name").AsString() == linkName), None)
         #
         #             if refLinkInstance is None:
-        #                 TaskDialog.Show("Warning", "Link instance not found for: {}".format(linkName))
-        #                 continue  # Bỏ qua nếu không tìm thấy
+        #                 TaskDialog.Show("Warning", "Link instance not found for: {0}".format(linkName))
+        #                 continue
         #
         #             # Lấy RevitLinkType từ instance
         #             linkType = doc.GetElement(refLinkInstance.GetTypeId())
         #
         #             if isinstance(linkType, RevitLinkType):
-        #                 # Mở giao dịch để reload liên kết
-        #
+        #                 # Reload link
         #                 linkType.Reload()
+        #                 # lstTest.append(linkName)
         #
         #         tg.Assimilate()
-
-    # except Exception as ex:
-    # TaskDialog.Show("Error", "An error occurred: {}".format(ex))
+        #
+        #     # Cập nhật trạng thái ListView sau khi reload
+        #     for item in selectedItems:
+        #         item.Checked = False  # Bỏ chọn để người dùng có thể chọn lại
+        #         # Thêm logic cập nhật trạng thái nếu cần, ví dụ:
+        #         # item.SubItems[1].Text = "Reloaded"
+        #
+        #     print("Reloaded links: " + str(lstTest))
+        #
+        # except Exception as ex:
+        #     TaskDialog.Show("Error", "An error occurred: {0}".format(str(ex)))
 
     def BtnUnloadClick(self, sender, e):
         pass
