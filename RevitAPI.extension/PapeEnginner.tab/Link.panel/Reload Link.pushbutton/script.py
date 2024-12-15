@@ -73,7 +73,7 @@ try:
 
     nameLink = [link.LookupParameter("Type Name").AsString() for link in linkType]
 
-    statusLoad = ["Loaded" if i is not None else "Unloaded" for i in docLink]
+    statusLoad = ["Loaded" if i is not None else "Not Loaded" for i in docLink]
 
     linkWorkset = [link.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM) for link in linkType]
     linkWorksetName = [i.AsValueString() for i in linkWorkset]

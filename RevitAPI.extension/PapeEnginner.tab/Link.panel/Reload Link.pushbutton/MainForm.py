@@ -47,8 +47,8 @@ from System.Collections.Generic import List
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 uidoc = __revit__.ActiveUIDocument
-"""-------------------------------------------------------------------------------------------"""
-comboLst = ["None"]
+
+"""------------------------------------------------------------------------------------------"""
 
 
 class MainForm(Form):
@@ -101,7 +101,7 @@ class MainForm(Form):
         self._headerStatus = System.Windows.Forms.ColumnHeader()
         self._headerSavePath = System.Windows.Forms.ColumnHeader()
         self._headerWorkset = System.Windows.Forms.ColumnHeader()
-        self._headerNewPath = System.Windows.Forms.ColumnHeader()
+
         self._groupBoxData.SuspendLayout()
         self._groupBoxPosition.SuspendLayout()
         self.SuspendLayout()
@@ -115,7 +115,7 @@ class MainForm(Form):
             [self._headerLinkName,
              self._headerStatus,
              self._headerSavePath,
-             self._headerNewPath,
+
              self._headerWorkset]))
         self._listView.GridLines = True
         self._listView.LabelWrap = False
@@ -402,12 +402,7 @@ class MainForm(Form):
         #
         self._headerWorkset.Text = "Workset"
         self._headerWorkset.Width = 119
-        # headerNewPath
         #
-        self._headerNewPath.Text = "New Path"
-        self._headerNewPath.Width = 89
-        #
-
         # Anchor listView
         #
         self._listView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
@@ -523,14 +518,6 @@ class MainForm(Form):
         pass
 
     def BtnAddLinksClick(self, sender, e):
-        # addFolder = forms.pick_file(files_filter='(*.rvt)''(*.dwg)',multi_file=True)
-        # addFolder = forms.pick_file(
-        #     files_filter='All Files (*.*)|*.*|'
-        #                  'Excel Workbook (*.xlsx)|*.xlsx|'
-        #                  'Excel 97-2003 Workbook (*.xls)|*.xls|'
-        #                  'RVT Files (*.rvt)|*.rvt',
-        #     multi_file=True
-        # )
 
         self.addRVTFile = forms.pick_file(
             files_filter='RVT Files (*.rvt)|*.rvt',
@@ -543,72 +530,21 @@ class MainForm(Form):
         pass
 
     def BtnReloadClick(self, sender, e):
-        # Lấy danh sách các mục được chọn từ ListView
+        """Reload selected links"""
         selectedItems = [item for item in self._listView.Items if item.Checked]
 
-        if not selectedItems:
-            TaskDialog.Show("Warning", "No link selected for reload.")
-            return
-
-        lstTest = []
-
-        for i in selectedItems:
-            linkName = i.Text
-
-            # Tìm RevitLinkInstance dựa trên tên
-            refLinkInstance = next(
-                (link for link in FilteredElementCollector(doc).OfClass(RevitLinkInstance).ToElements()
-                 if doc.GetElement(link.GetTypeId()).LookupParameter("Type Name").AsString() == linkName), None)
-
-            lstTest.append(refLinkInstance)
-
-        print(lstTest)
-
-        for item in selectedItems:
-            item.Checked = False  # Bỏ chọn để người dùng có thể chọn lại
-            # Thêm logic cập nhật trạng thái nếu cần, ví dụ:
-            # item.SubItems[1].Text = "Reloaded"
-
-        # TransactionGroup để xử lý các thay đổi
-        # try:
-        #     with TransactionGroup(doc, "Reload Links") as tg:
-        #         tg.Start()
-        #
-        #         for i in selectedItems:
-        #             linkName = i.Text
-        #
-        #             # Tìm RevitLinkInstance dựa trên tên
-        #             refLinkInstance = next(
-        #                 (link for link in FilteredElementCollector(doc).OfClass(RevitLinkInstance).ToElements()
-        #                  if doc.GetElement(link.GetTypeId()).LookupParameter("Type Name").AsString() == linkName), None)
-        #
-        #             if refLinkInstance is None:
-        #                 TaskDialog.Show("Warning", "Link instance not found for: {0}".format(linkName))
-        #                 continue
-        #
-        #             # Lấy RevitLinkType từ instance
-        #             linkType = doc.GetElement(refLinkInstance.GetTypeId())
-        #
-        #             if isinstance(linkType, RevitLinkType):
-        #                 # Reload link
-        #                 linkType.Reload()
-        #                 # lstTest.append(linkName)
-        #
-        #         tg.Assimilate()
-        #
-        #     # Cập nhật trạng thái ListView sau khi reload
-        #     for item in selectedItems:
-        #         item.Checked = False  # Bỏ chọn để người dùng có thể chọn lại
-        #         # Thêm logic cập nhật trạng thái nếu cần, ví dụ:
-        #         # item.SubItems[1].Text = "Reloaded"
-        #
-        #     print("Reloaded links: " + str(lstTest))
-        #
-        # except Exception as ex:
-        #     TaskDialog.Show("Error", "An error occurred: {0}".format(str(ex)))
+        self.ProcessLinkAction(selectedItems, lambda link: link.Reload(), "Loaded")
 
     def BtnUnloadClick(self, sender, e):
-        pass
+        """Unload selected links after confirmation."""
+        selectedItems = [item for item in self._listView.Items if item.Checked]
+        res = forms.alert("You cannot use the Undo/Redo buttons after unloading a link, "
+                          "but the link may be reloaded using the Reload button. "
+                          "Do you want to continue?",
+                          title="Unload Link", ok=False, yes=True, no=True)
+
+        if res:  # Process only if user confirms 'Yes'
+            self.ProcessLinkAction(selectedItems, lambda link: link.Unload(None), "Not Loaded")
 
     def BtnRemoveClick(self, sender, e):
         pass
@@ -621,3 +557,40 @@ class MainForm(Form):
 
     def ButtonCloseClick(self, sender, e):
         pass
+
+    """------------------------------------------------------------------------------------------"""
+
+    def ProcessLinkAction(self, selectedItems, actionMethod, Status):
+        """
+        General method to process actions on Revit links.
+
+        Args:
+            selectedItems (list): Selected items from ListView.
+            actionMethod (callable): The method to execute on each link (e.g., Reload or Unload).
+            Status (str): The updated status to reflect in the UI.
+        """
+        if not selectedItems:
+            TaskDialog.Show("Warning", "No link selected for action.")
+            return
+
+        for item in selectedItems:
+            linkName = item.Text
+            refLinkInstance = next(
+                (link for link in FilteredElementCollector(doc).OfClass(RevitLinkInstance).ToElements()
+                 if doc.GetElement(link.GetTypeId()).LookupParameter("Type Name").AsString() == linkName), None)
+
+            if refLinkInstance is None:
+                TaskDialog.Show("Warning", "Link instance not found for: {}".format(linkName))
+                continue
+
+            linkType = doc.GetElement(refLinkInstance.GetTypeId())
+            if isinstance(linkType, RevitLinkType):
+                try:
+                    actionMethod(linkType)
+                    item.SubItems[1].Text = Status  # Update the status
+                except Exception as ex:
+                    TaskDialog.Show("Error", "Failed to perform action on link '{}': {}".format(linkName, str(ex)))
+
+        # Uncheck all items after processing
+        for item in selectedItems:
+            item.Checked = False
