@@ -115,7 +115,6 @@ class MainForm(Form):
             [self._headerLinkName,
              self._headerStatus,
              self._headerSavePath,
-
              self._headerWorkset]))
         self._listView.GridLines = True
         self._listView.LabelWrap = False
@@ -127,6 +126,7 @@ class MainForm(Form):
         self._listView.UseCompatibleStateImageBehavior = False
         self._listView.View = System.Windows.Forms.View.Details
         self._listView.Resize += self.ListViewResize
+
         self._listView.SelectedIndexChanged += self.ListViewSelectedIndexChanged
 
         # Gắn dữ liệu vào ListView
@@ -220,6 +220,7 @@ class MainForm(Form):
         self._comboBoxWorkset.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         self._comboBoxWorkset.FormattingEnabled = True
         self._comboBoxWorkset.Items.AddRange(System.Array[System.Object](self.worksetName))
+        self._comboBoxWorkset.SelectedIndex = 0
 
         self._comboBoxWorkset.Location = System.Drawing.Point(6, 87)
         self._comboBoxWorkset.Name = "comboBoxWorkset"
@@ -463,13 +464,11 @@ class MainForm(Form):
         self.PerformLayout()
 
     def CheckBoxSelectAllCheckedChanged(self, sender, e):
-        """List View"""
-        # Status of checkbox
-        isChecked = self._checkBoxSelectAll.Checked
+        """Check or uncheck all items in the ListView."""
 
-        # Lặp qua tất cả các item trong ListView và thay đổi trạng thái checkbox
+        isChecked = self._checkBoxSelectAll.Checked
         for item in self._listView.Items:
-            item.Checked = isChecked  # Đánh dấu hoặc bỏ đánh dấu các checkbox
+            item.Checked = isChecked
 
     def TextBoxFindTextChanged(self, sender, e):
         # Lấy giá trị tìm kiếm từ TextBox
@@ -518,7 +517,6 @@ class MainForm(Form):
         pass
 
     def BtnAddLinksClick(self, sender, e):
-
         self.addRVTFile = forms.pick_file(
             files_filter='RVT Files (*.rvt)|*.rvt',
             multi_file=True
@@ -550,10 +548,65 @@ class MainForm(Form):
         pass
 
     def BtnSetWorksetClick(self, sender, e):
-        pass
+        # Lấy tên Workset được chọn từ ComboBox
+        selectedWorksetName = self._comboBoxWorkset.SelectedItem
+        # Lọc các mục được chọn trong ListView
+        selectedItems = [item for item in self._listView.Items if item.Checked]
+
+        # Tìm WorksetId từ tên Workset được chọn
+        worksetId = None
+        for workset in FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset).ToWorksets():
+            if workset.Name == selectedWorksetName:
+                worksetId = workset.Id.IntegerValue
+                break
+
+        if selectedWorksetName == "Not a working share file":
+            ShowNotification("Fail", "Not a workingshare file")
+            return
+        elif not selectedItems:
+            ShowNotification("Fail", "No Revit Link chooose")
+            return
+        else:
+            # Sử dụng TransactionGroup để nhóm các thay đổi
+            with TransactionGroup(doc, "Change Workset for Links") as tg:
+                tg.Start()
+                for item in selectedItems:
+                    # Lấy tên liên kết từ ListView
+                    linkName = item.Text
+                    # Tìm RevitLinkInstance dựa trên tên liên kết
+                    refLinkInstance = next(
+                        (link for link in FilteredElementCollector(doc)
+                        .OfClass(RevitLinkInstance)
+                        .ToElements()
+                         if doc.GetElement(link.GetTypeId()).LookupParameter("Type Name").AsString() == linkName),
+                        None
+                    )
+
+                    # Bắt đầu một giao dịch để thay đổi Workset
+                    with Transaction(doc, "Set Workset for Link") as t:
+                        t.Start()
+                        linkType = doc.GetElement(refLinkInstance.GetTypeId())
+                        if isinstance(linkType, RevitLinkType):
+                            # Lấy tham số Workset và thay đổi giá trị
+                            param = linkType.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
+                            if param:
+                                param.Set(worksetId)
+                                # Cập nhật cột Workset trong ListView
+                                item.SubItems[3].Text = selectedWorksetName
+                            else:
+                                ShowNotification("Error",
+                                                 "Cannot set Workset for link '{}' - Parameter not found.".format(
+                                                     linkName))
+                        t.Commit()
+
+                # Đồng hóa thay đổi sau khi tất cả giao dịch hoàn thành
+                tg.Assimilate()
+                ShowNotification("Success", "Workset updated and links reloaded successfully.")
 
     def BtnOKClick(self, sender, e):
-        pass
+        # Save and close form
+        self.DialogResult = System.Windows.Forms.DialogResult.OK
+        self.Close()
 
     def ButtonCloseClick(self, sender, e):
         pass
@@ -570,7 +623,7 @@ class MainForm(Form):
             Status (str): The updated status to reflect in the UI.
         """
         if not selectedItems:
-            TaskDialog.Show("Warning", "No link selected for action.")
+            ShowNotification("Warning", "No link selected for action.")
             return
 
         for item in selectedItems:
@@ -580,7 +633,7 @@ class MainForm(Form):
                  if doc.GetElement(link.GetTypeId()).LookupParameter("Type Name").AsString() == linkName), None)
 
             if refLinkInstance is None:
-                TaskDialog.Show("Warning", "Link instance not found for: {}".format(linkName))
+                ShowNotification("Warning", "Link instance not found for: {}".format(linkName))
                 continue
 
             linkType = doc.GetElement(refLinkInstance.GetTypeId())
@@ -589,7 +642,7 @@ class MainForm(Form):
                     actionMethod(linkType)
                     item.SubItems[1].Text = Status  # Update the status
                 except Exception as ex:
-                    TaskDialog.Show("Error", "Failed to perform action on link '{}': {}".format(linkName, str(ex)))
+                    ShowNotification("Error", "Failed to perform action on link '{}': {}".format(linkName, str(ex)))
 
         # Uncheck all items after processing
         for item in selectedItems:
