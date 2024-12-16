@@ -548,32 +548,30 @@ class MainForm(Form):
         pass
 
     def BtnSetWorksetClick(self, sender, e):
-        # Lấy tên Workset được chọn từ ComboBox
+        """
+        Apply the selected workset to all checked Revit links.
+        """
+        # Get the selected workset name
         selectedWorksetName = self._comboBoxWorkset.SelectedItem
-        # Lọc các mục được chọn trong ListView
+
+        # Get all selected (checked) items from the ListView
         selectedItems = [item for item in self._listView.Items if item.Checked]
 
-        # Tìm WorksetId từ tên Workset được chọn
-        worksetId = None
-        for workset in FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset).ToWorksets():
-            if workset.Name == selectedWorksetName:
-                worksetId = workset.Id.IntegerValue
-                break
+        # Get all available worksets
+        worksetCollector = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset).ToWorksets()
 
-        if selectedWorksetName == "Not a working share file":
-            ShowNotification("Fail", "Not a workingshare file")
+        if not worksetCollector:
+            ShowNotification("Warning", "No worksets available in this project.")
             return
-        elif not selectedItems:
-            ShowNotification("Fail", "No Revit Link chooose")
-            return
-        else:
-            # Sử dụng TransactionGroup để nhóm các thay đổi
-            with TransactionGroup(doc, "Change Workset for Links") as tg:
-                tg.Start()
+
+        # Start a TransactionGroup to batch changes
+        with TransactionGroup(doc, "Set Workset for Links") as tg:
+            tg.Start()
+            try:
                 for item in selectedItems:
-                    # Lấy tên liên kết từ ListView
-                    linkName = item.Text
-                    # Tìm RevitLinkInstance dựa trên tên liên kết
+                    linkName = item.Text  # Get the link name from the ListView
+
+                    # Find the RevitLinkInstance for the link
                     refLinkInstance = next(
                         (link for link in FilteredElementCollector(doc)
                         .OfClass(RevitLinkInstance)
@@ -582,26 +580,21 @@ class MainForm(Form):
                         None
                     )
 
-                    # Bắt đầu một giao dịch để thay đổi Workset
-                    with Transaction(doc, "Set Workset for Link") as t:
-                        t.Start()
-                        linkType = doc.GetElement(refLinkInstance.GetTypeId())
-                        if isinstance(linkType, RevitLinkType):
-                            # Lấy tham số Workset và thay đổi giá trị
-                            param = linkType.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
-                            if param:
-                                param.Set(worksetId)
-                                # Cập nhật cột Workset trong ListView
-                                item.SubItems[3].Text = selectedWorksetName
-                            else:
-                                ShowNotification("Error",
-                                                 "Cannot set Workset for link '{}' - Parameter not found.".format(
-                                                     linkName))
-                        t.Commit()
+                    # Apply the selected workset using the SetWorkset function
+                    try:
+                        self.SetWorkset(worksetCollector, selectedWorksetName, refLinkInstance)
+                        # Update the ListView to reflect the new workset
+                        item.SubItems[3].Text = selectedWorksetName
+                    except Exception as ex:
+                        ShowNotification("Error",
+                                         "Warning: {}".format(ex))  # Display a task dialog with the error message
 
-                # Đồng hóa thay đổi sau khi tất cả giao dịch hoàn thành
+                # Commit the transaction group
                 tg.Assimilate()
-                ShowNotification("Success", "Workset updated and links reloaded successfully.")
+                ShowNotification("Success", "Successful")  # Display a task dialog with the error message
+
+            except Exception as ex:
+                tg.RollBack()
 
     def BtnOKClick(self, sender, e):
         # Save and close form
@@ -612,6 +605,36 @@ class MainForm(Form):
         pass
 
     """------------------------------------------------------------------------------------------"""
+
+    def SetWorkset(self, worksetCollector, askWorkset, ele):
+        """
+        Set workset for element
+        """
+        # Lấy danh sách tất cả Workset
+
+        selectedWorksetId = None
+
+        # Tìm Workset ID dựa trên tên được chọn
+        for workset in worksetCollector:
+            if workset.Name == askWorkset:
+                selectedWorksetId = workset.Id.IntegerValue
+                break
+
+        # Nếu không tìm thấy Workset, thông báo lỗi
+        if selectedWorksetId is None:
+            TaskDialog.Show("Error", "Workset '{}' not found.".format(askWorkset))
+            return
+
+        # Bắt đầu giao dịch để đặt Workset cho element
+        with Transaction(doc, 'Set Workset') as t:
+            t.Start()
+            param = ele.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
+
+            if param and param.IsReadOnly == False:
+                param.Set(selectedWorksetId)
+            else:
+                TaskDialog.Show("Error", "Cannot set Workset for element")
+            t.Commit()
 
     def ProcessLinkAction(self, selectedItems, actionMethod, Status):
         """

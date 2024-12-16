@@ -54,44 +54,56 @@ uiview = [x for x in uiviews if x.ViewId == view.Id][0]
 """----------------------FUNCTION----------------------------"""
 
 
-def SetWorkset():
-    pass
-
-
-"""----------------------MAIN CODE----------------------------"""
-
-try:
-    # Thu thập các RevitLinkInstance
+def CollectLinkData():
+    """
+    Collect all required data about Revit links in the model.
+    """
     refLinkInstance = FilteredElementCollector(doc).OfClass(RevitLinkInstance).ToElements()
-
     linkType = [doc.GetElement(ref.GetTypeId()) for ref in refLinkInstance]
     externalFileRef = [link.GetExternalFileReference() for link in linkType]
     docLink = [ref.GetLinkDocument() for ref in refLinkInstance]
 
-    # pathName = [i.PathName if i is not None else "Unknown Path" for i in linkType]
-    pathName = [(ModelPathUtils.ConvertModelPathToUserVisiblePath(i.GetAbsolutePath())) for i in externalFileRef]
-
+    #
+    pathName = [
+        ModelPathUtils.ConvertModelPathToUserVisiblePath(i.GetAbsolutePath()) for i in externalFileRef
+    ]
+    #
     nameLink = [link.LookupParameter("Type Name").AsString() for link in linkType]
-
+    #
     statusLoad = ["Loaded" if i is not None else "Not Loaded" for i in docLink]
-
-    linkWorkset = [link.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM) for link in linkType]
-    linkWorksetName = [i.AsValueString() for i in linkWorkset]
-
+    #
+    linkWorkset = []
+    for link in refLinkInstance:
+        worksetId = link.WorksetId
+        worksetTable = doc.GetWorksetTable()
+        workset = worksetTable.GetWorkset( worksetId)
+        linkWorkset.append(workset)
+    linkWorksetName = [i.Name for i in linkWorkset]
+    #
     referenceType = [
         "Overlay" if hasattr(link, "AttachmentType") and link.AttachmentType == AttachmentType.Overlay
         else "Attachment" if hasattr(link, "AttachmentType")
         else "Unknown"
         for link in linkType
     ]
-
+    #
     worksetCollector = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset).ToWorksets()
-    # Lấy tên các Workset hoặc trả về rỗng nếu không có Workset
     worksetName = [i.Name for i in worksetCollector] if worksetCollector else ["Not a working share file"]
+
+    return nameLink, statusLoad, pathName, linkWorksetName, worksetName
+
+
+"""----------------------MAIN CODE----------------------------"""
+
+try:
 
     """------------RUN FORM----------"""
     openForm = True
     while openForm:
+        # Thu thập dữ liệu ban đầu
+        nameLink, statusLoad, pathName, linkWorksetName, worksetName = CollectLinkData()
+
+        # Mở form với dữ liệu hiện tại
         f = MainForm(nameLink, statusLoad, pathName, linkWorksetName, worksetName)
         f.ShowDialog()
 
@@ -100,6 +112,8 @@ try:
             break
 
         elif f.DialogResult == System.Windows.Forms.DialogResult.OK:
+            # Cập nhật lại dữ liệu từ Revit model sau khi thực hiện thay đổi
+            nameLink, statusLoad, pathName, linkWorksetName, worksetName = CollectLinkData()
             openForm = False
 
 
