@@ -45,70 +45,48 @@ selection = uidoc.Selection
 
 """----------------------FUNCTION----------------------------"""
 
+def GetCeilingElements():
+    """Retrieve Ceiling elements from the active document."""
+    ceilingElements = FilteredElementCollector(doc).OfClass(Ceiling).ToElements()
+    return ceilingElements
 
-def SetWorkset(askWorkset, ele):
-    """
-    Đặt workset cho một element cụ thể
-    """
-    # Lấy danh sách tất cả Workset
-    worksetCollector = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset).ToWorksets()
-    selectedWorksetId = None
+def CreateCeilingCurves(ceilingElement):
+    """Extract boundary curves from a Ceiling element."""
+    boundaryOptions = SpatialElementBoundaryOptions()
+    boundaries = ceilingElement.GetBoundarySegments(boundaryOptions)
+    curveList = []
 
-    # Tìm Workset ID dựa trên tên được chọn
-    for workset in worksetCollector:
-        if workset.Name == askWorkset:
-            selectedWorksetId = workset.Id.IntegerValue
-            break
+    for boundaryList in boundaries:
+        for segment in boundaryList:
+            curve = segment.GetCurve()  # Get the boundary curve
+            curveList.append(curve)
 
-    # Nếu không tìm thấy Workset, thông báo lỗi
-    if selectedWorksetId is None:
-        TaskDialog.Show("Error", "Workset '{}' not found.".format(askWorkset))
-        return
-
-    # Bắt đầu giao dịch để đặt Workset cho element
-    with Transaction(doc, 'Set Workset') as t:
-        t.Start()
-        param = ele.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
-
-        if param and param.IsReadOnly == False:
-            param.Set(selectedWorksetId)
-        else:
-            TaskDialog.Show("Error", "Cannot set Workset for element ID: {}".format(ele.Id))
-        t.Commit()
-
+    return curveList
 
 """----------------------MAIN CODE----------------------------"""
 
 try:
-    # Người dùng chọn các phần tử trong mô hình
-    refEle = uidoc.Selection.PickObjects(ObjectType.Element, "Pick Objects")
-    getEle = [doc.GetElement(e.ElementId) for e in refEle]
+    # Get Ceiling elements
+    ceilingElements = GetCeilingElements()
 
-    # Lấy danh sách tất cả Workset
-    worksetCollector = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset).ToWorksets()
-    worksetName = [i.Name for i in worksetCollector]
-
-    # Kiểm tra nếu không có Workset nào
-    if not worksetName:
-        TaskDialog.Show("Error", "No worksets available in the model.")
+    if not ceilingElements:
+        TaskDialog.Show("Info", "No Ceilings found in the document.")
     else:
-        # Yêu cầu người dùng chọn Workset
-        askWorkset = forms.ask_for_one_item(
-            worksetName,
-            default=worksetName[0] if worksetName else None,
-            prompt='Choose Workset',
-            title='Please select a workset'
-        )
-        # Áp dụng Workset cho từng phần tử đã chọn
-        with TransactionGroup(doc,'Set Workset for All') as tg:
-            tg.Start()
-            for e in getEle:
-                SetWorkset(askWorkset, e)
-            tg.Assimilate()
+        for ceilingElement in ceilingElements:
+            ceilingName = ceilingElement.Name
+            ceilingId = ceilingElement.Id
+            TaskDialog.Show("Ceiling Info", "Ceiling Name: {}\nCeiling ID: {}".format(ceilingName, ceilingId))
+
+            # Create curves for the ceiling
+            ceilingCurves = CreateCeilingCurves(ceilingElement)
+            for curve in ceilingCurves:
+                startPoint = curve.GetEndPoint(0)
+                endPoint = curve.GetEndPoint(1)
+                print("Curve Start: {}, End: {}".format(startPoint, endPoint))
 
 # Handle the case when the user cancels the operation
 except Autodesk.Revit.Exceptions.OperationCanceledException:
-    pass
+    TaskDialog.Show("Canceled", "Operation was canceled by the user.")
 
 # Handle any other exceptions and show an error message
 except Exception as ex:
