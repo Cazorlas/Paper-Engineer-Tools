@@ -45,23 +45,45 @@ selection = uidoc.Selection
 
 """----------------------FUNCTION----------------------------"""
 
+
+class SelectionFilter(ISelectionFilter):
+    """Filter to select only elements of a specific category."""
+
+    def __init__(self, category_name):
+        self.category_name = category_name
+
+    def AllowElement(self, e):
+        if e.Category and e.Category.Name == self.category_name:
+            return True
+        return False
+
+    def AllowReference(self, ref, point):
+        return False
+
+
 def GetCeilingElements():
     """Retrieve Ceiling elements from the active document."""
-    ceilingElements = FilteredElementCollector(doc).OfClass(Ceiling).ToElements()
+    refCeilingElements = FilteredElementCollector(doc).OfClass(Ceiling).WhereElementIsNotElementType().ToElements()
+    ceilingElements = [doc.GetElement(ref.Id) for ref in refCeilingElements]
     return ceilingElements
+
 
 def CreateCeilingCurves(ceilingElement):
     """Extract boundary curves from a Ceiling element."""
-    boundaryOptions = SpatialElementBoundaryOptions()
-    boundaries = ceilingElement.GetBoundarySegments(boundaryOptions)
     curveList = []
 
-    for boundaryList in boundaries:
-        for segment in boundaryList:
-            curve = segment.GetCurve()  # Get the boundary curve
+    # Get sketch of ceiling
+    ceilingSketch = ceilingElement.GetSketch()
+
+    if ceilingSketch:
+        # Extract ModelCurves from the sketch
+        for modelCurveId in ceilingSketch.GetAllModelCurveIds():
+            modelCurve = doc.GetElement(modelCurveId)
+            curve = modelCurve.GeometryCurve  # Get the curve geometry
             curveList.append(curve)
 
     return curveList
+
 
 """----------------------MAIN CODE----------------------------"""
 
@@ -69,20 +91,11 @@ try:
     # Get Ceiling elements
     ceilingElements = GetCeilingElements()
 
-    if not ceilingElements:
-        TaskDialog.Show("Info", "No Ceilings found in the document.")
-    else:
-        for ceilingElement in ceilingElements:
-            ceilingName = ceilingElement.Name
-            ceilingId = ceilingElement.Id
-            TaskDialog.Show("Ceiling Info", "Ceiling Name: {}\nCeiling ID: {}".format(ceilingName, ceilingId))
+    for ceiling in ceilingElements:
+        curves = CreateCeilingCurves(ceiling)
 
-            # Create curves for the ceiling
-            ceilingCurves = CreateCeilingCurves(ceilingElement)
-            for curve in ceilingCurves:
-                startPoint = curve.GetEndPoint(0)
-                endPoint = curve.GetEndPoint(1)
-                print("Curve Start: {}, End: {}".format(startPoint, endPoint))
+
+
 
 # Handle the case when the user cancels the operation
 except Autodesk.Revit.Exceptions.OperationCanceledException:
