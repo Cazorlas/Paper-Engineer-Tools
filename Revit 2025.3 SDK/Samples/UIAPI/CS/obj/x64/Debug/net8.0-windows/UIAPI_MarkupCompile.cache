@@ -1,0 +1,20 @@
+﻿UIAPI
+
+
+library
+C#
+.cs
+D:\GitDirectory\Revit\Revit_2025_3\revit\RevitAdditions\RevitSDK\Software Development Kit\Samples\UIAPI\CS\obj\x64\Debug\net8.0-windows\
+Revit.SDK.Samples.UIAPI.CS
+none
+false
+TRACE;DEBUG;NET;NET8_0;NETCOREAPP
+
+42125290248
+
+16372912642
+2101965749086
+OptionsDialog\Options.xaml;OptionsDialog\UserControl1.xaml;OptionsDialog\UserControl2.xaml;OptionsDialog\UserControl3.xaml;
+
+False
+

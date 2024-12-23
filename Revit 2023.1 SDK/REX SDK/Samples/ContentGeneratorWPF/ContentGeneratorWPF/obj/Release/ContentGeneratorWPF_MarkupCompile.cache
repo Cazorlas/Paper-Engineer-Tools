@@ -1,0 +1,20 @@
+﻿ContentGeneratorWPF
+
+
+library
+C#
+.cs
+D:\Akash\Git_Directory\Revit\dev2023\revit\RevitAdditions\RevitSDK\Software Development Kit\REX SDK\Samples\ContentGeneratorWPF\ContentGeneratorWPF\obj\Release\
+REX.ContentGeneratorWPF
+none
+false
+TRACE;TV2_0;TV1_5;REXUI;REXUIL2;REXEI;REVIT;ContentGeneratorWPF
+
+9137659550
+8-806512800
+211298709807
+22628627758
+Resources\Dialogs\ContentGeneratorCreateControl.xaml;Resources\Dialogs\ContentGeneratorReadControl.xaml;Resources\Dialogs\MainControl.xaml;Resources\Dialogs\MainWindow.xaml;Resources\Dialogs\PolygonViewer.xaml;Resources\Dialogs\PropertiesControl.xaml;Resources\Dialogs\PropertyControl.xaml;Resources\Dialogs\SelectedElementControl.xaml;Resources\Dialogs\UserControlView.xaml;
+
+True
+
