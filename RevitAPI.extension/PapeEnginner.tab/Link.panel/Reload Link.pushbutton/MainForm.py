@@ -51,6 +51,8 @@ uidoc = __revit__.ActiveUIDocument
 """------------------------------------------------------------------------------------------"""
 
 
+
+
 class MainForm(Form):
     def __init__(self, linkName, status, savedPath, linkWorkset, worksetName):
         self.linkName = linkName
@@ -118,6 +120,7 @@ class MainForm(Form):
              self._headerWorkset]))
         self._listView.GridLines = True
         self._listView.LabelWrap = False
+        self._listView.ShowItemToolTips = True
         self._listView.Location = System.Drawing.Point(12, 50)
         self._listView.Name = "listView"
         self._listView.ShowItemToolTips = True
