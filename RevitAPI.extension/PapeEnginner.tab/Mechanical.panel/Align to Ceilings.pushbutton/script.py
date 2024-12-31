@@ -48,11 +48,63 @@ version = int(app.VersionNumber)
 """ ----------------------FUNCTIONS----------------------------"""
 
 
+class SelectionFilter(ISelectionFilter):
+    """Filter to select only elements of a specific category."""
+
+    def __init__(self, categoryName):
+        self.categoryName = categoryName
+
+    def AllowElement(self, e):
+        if e.Category and e.Category.Name == self.categoryName:
+            return True
+        return False
+
+    def AllowReference(self, ref, point):
+        return False
 
 
+def GetCeilings():
+    """Get ceiling"""
+    refCeiling = uidoc.Selection.PickObjects(ObjectType.Element, SelectionFilter('Ceilings'), 'Select Ceiling')
+    ceilings = [doc.GetElement(ref.ElementId) for ref in refCeiling]
+
+    return ceilings
+
+
+def GetFillPatternsFromCeilings(ceilings):
+    """
+    Retrieve Fill Patterns from the selected ceilings.
+    Parameters:
+        ceilings (List[Element]): List of Ceiling elements.
+    Returns:
+        List[str]: A list of Fill Pattern names from each ceiling.
+    """
+    fillPatterns = []
+    for ceiling in ceilings:
+        bottomFaces = HostObjectUtils.GetBottomFaces(ceiling)
+        for faceRef in bottomFaces:
+            face = ceiling.GetGeometryObjectFromReference(faceRef)
+            if face.MaterialElementId != ElementId.InvalidElementId:
+                material = doc.GetElement(face.MaterialElementId)
+                if material and material.SurfaceForegroundPatternId != ElementId.InvalidElementId:
+                    pattern = doc.GetElement(material.SurfaceForegroundPatternId)
+                    if pattern:
+                        fillPatterns.append(pattern.Name)
+                        break
+    return fillPatterns
+
+#def
 
 """----------------------MAIN CODE----------------------------"""
 try:
+
+    # Select ceilings from the user
+    ceilings = GetCeilings()
+
+    # Extract Fill Patterns from selected ceilings
+    fillPatterns = GetFillPatternsFromCeilings(ceilings)
+
+    print(fillPatterns)
 
 
 
