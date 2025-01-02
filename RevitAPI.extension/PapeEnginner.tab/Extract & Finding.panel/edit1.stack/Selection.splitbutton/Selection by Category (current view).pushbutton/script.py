@@ -10,6 +10,9 @@ import math  # Standard Python math library
 from System.Collections.Generic import *
 from pyrevit import forms, revit, script
 
+from SubForm import *
+from MainForm import MainForm
+
 clr.AddReference('ProtoGeometry')  # Dynamo's geometry proxy
 from Autodesk.DesignScript.Geometry import *  # Import everything from Dynamo's geometry
 
@@ -48,19 +51,23 @@ selection = uidoc.Selection
 """----------------------MAIN CODE----------------------------"""
 
 try:
-    # TODO: Create Selected Elements list
-    eleRef = selection.PickObjects(ObjectType.Element, "Select Elements to check IDs")
-    eles = [doc.GetElement(ref.ElementId) for ref in eleRef]
+    """------------RUN FORM----------"""
+    openForm = True
+    while openForm:
 
-    nameLst = [e.Name for e in eles]
-    idLst = [i.Id.IntegerValue  for i in eles]
+        # Mở form với dữ liệu hiện tại
+        f = MainForm()
+        f.ShowDialog()
 
-    # Print the results to the console
-    print("Selected Element Names:")
-    print(nameLst)
-    print(50 * "-")  # Print a separator line
-    print("Selected Element IDs:")
-    print(idLst)
+        # User cancel
+        if f.DialogResult != System.Windows.Forms.DialogResult.OK:
+            break
+
+        elif f.DialogResult == System.Windows.Forms.DialogResult.OK:
+            # Cập nhật lại dữ liệu từ Revit model sau khi thực hiện thay đổi
+
+            openForm = False
+
 
 except Autodesk.Revit.Exceptions.OperationCanceledException:
     pass
