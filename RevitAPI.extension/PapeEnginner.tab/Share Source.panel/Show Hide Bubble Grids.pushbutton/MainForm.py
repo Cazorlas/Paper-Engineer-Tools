@@ -52,7 +52,7 @@ class MainForm(Form):
     def InitializeComponent(self):
         # Get the directory of the running script
         script_dir = os.path.dirname(__file__)
-        image_path = os.path.join(script_dir, "GAI 1.jpg")
+        image_path = os.path.join(script_dir, "MEO 1.jpg")
         icon_path = os.path.join(script_dir, "icon.ico")
 
         # Load custom icon
@@ -114,7 +114,7 @@ class MainForm(Form):
         self._OKbutton.BackColor = System.Drawing.Color.FromArgb(255, 128, 0)
         self._OKbutton.Font = System.Drawing.Font("Microsoft Sans Serif", 10, System.Drawing.FontStyle.Regular,
                                                   System.Drawing.GraphicsUnit.Point, 0)
-        self._OKbutton.Location = System.Drawing.Point(332, 96)
+        self._OKbutton.Location = System.Drawing.Point(332, 120)
         self._OKbutton.Name = "OKbutton"
         self._OKbutton.Size = System.Drawing.Size(85, 34)
         self._OKbutton.TabIndex = 1
@@ -180,6 +180,9 @@ class MainForm(Form):
         self.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink
         self.CancelButton = self._Cancelbutton
         self.ClientSize = System.Drawing.Size(445, 263)
+        # Giới hạn kích thước cửa sổ
+        self.MinimumSize = System.Drawing.Size(445, 300)  # Kích thước tối thiểu
+        self.MaximumSize = System.Drawing.Size(445, 300)  # Kích thước tối đa
         self.Controls.Add(self._hidebutton)
         self.Controls.Add(self._showbutton)
         self.Controls.Add(self._pictureBox1)
