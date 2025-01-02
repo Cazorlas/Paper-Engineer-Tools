@@ -181,7 +181,7 @@ class MainForm(Form):
         self.Controls.Add(self._textBox1)
         self.Controls.Add(self._listView)
         self.MinimumSize = System.Drawing.Size(472, 270)
-        self.Text = "Select by Categories (current view)"
+        self.Text = "Select by Categories (all)"
         self.ResumeLayout(False)
         self.PerformLayout()
 

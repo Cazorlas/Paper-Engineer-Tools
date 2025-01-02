@@ -48,26 +48,90 @@ selection = uidoc.Selection
 
 # ------Note: __revit__ = Autodesk.Revit.UI.UIApplication
 
+"""----------------------FUNCTIONS----------------------------"""
+
+
+def GetAllCategory():
+    """
+    Trả về danh sách tất cả các Category trong tài liệu Revit hiện tại.
+    """
+    categories = doc.Settings.Categories
+    lstCategory = []
+    lstCategoryName = []
+
+
+    for category in categories:
+        # Kiểm tra nếu category hợp lệ và thuộc kiểu Model
+        if category and category.CategoryType == CategoryType.Model:
+            lstCategory.append(category)
+            lstCategoryName.append(category.Name)
+
+
+    return lstCategory, lstCategoryName
+
+def GetCategories(categories, categoriesName, selectedCategoriesName):
+    """
+    Lọc danh mục đã chọn từ danh sách categories và categoriesName.
+    """
+    lstCategories = []
+    for selectedName in selectedCategoriesName:
+        for i, name in enumerate(categoriesName):
+            if selectedName == name:
+                lstCategories.append(categories[i])
+    return lstCategories
+
+def SelectElementsByCategory(selectedCategories):
+    """
+    Chọn các phần tử trong view hiện tại dựa trên danh sách Category được tick.
+    """
+    selectedElements = []
+    for category in selectedCategories:
+        if category:
+            collector = FilteredElementCollector(doc, view.Id)\
+                .OfCategoryId(category.Id)\
+                .WhereElementIsNotElementType()\
+                .ToElements()
+            selectedElements.extend(collector)
+
+    if selectedElements:
+        selection.SetElementIds(List[ElementId]([e.Id for e in selectedElements]))
+    else:
+        ShowNotification("Erro","Can not find any Elements")
+
+
+
 """----------------------MAIN CODE----------------------------"""
 
 try:
+    # Ví dụ sử dụng
+    categories, categoriesName = GetAllCategory()
+
+
+
     """------------RUN FORM----------"""
     openForm = True
     while openForm:
 
         # Mở form với dữ liệu hiện tại
-        f = MainForm()
+        f = MainForm(categoriesName)
         f.ShowDialog()
+
+        # Lấy danh mục đã chọn
+        selectedCategoriesName = [item.Text for item in f._listView.Items if item.Checked]
+        selectedCategories = GetCategories(categories, categoriesName, selectedCategoriesName)
+        a = [i.Id for i in selectedCategories]
+
 
         # User cancel
         if f.DialogResult != System.Windows.Forms.DialogResult.OK:
             break
 
         elif f.DialogResult == System.Windows.Forms.DialogResult.OK:
-            # Cập nhật lại dữ liệu từ Revit model sau khi thực hiện thay đổi
+            # print(a)
 
+            # Gọi hàm để chọn các phần tử trong view dựa trên danh sách tick
+            SelectElementsByCategory(selectedCategories)
             openForm = False
-
 
 except Autodesk.Revit.Exceptions.OperationCanceledException:
     pass

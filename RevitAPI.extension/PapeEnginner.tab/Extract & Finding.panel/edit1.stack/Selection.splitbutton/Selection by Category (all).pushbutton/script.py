@@ -10,6 +10,9 @@ import math  # Standard Python math library
 from System.Collections.Generic import *
 from pyrevit import forms, revit, script
 
+from SubForm import *
+from MainForm import MainForm
+
 clr.AddReference('ProtoGeometry')  # Dynamo's geometry proxy
 from Autodesk.DesignScript.Geometry import *  # Import everything from Dynamo's geometry
 
@@ -45,39 +48,89 @@ selection = uidoc.Selection
 
 # ------Note: __revit__ = Autodesk.Revit.UI.UIApplication
 
+"""----------------------FUNCTIONS----------------------------"""
+
+
+def GetAllCategory():
+    """
+    Trả về danh sách tất cả các Category trong tài liệu Revit hiện tại.
+    """
+    categories = doc.Settings.Categories
+    lstCategory = []
+    lstCategoryName = []
+
+    for category in categories:
+        # Kiểm tra nếu category hợp lệ và thuộc kiểu Model
+        if category and category.CategoryType == CategoryType.Model:
+            lstCategory.append(category)
+            lstCategoryName.append(category.Name)
+
+    return lstCategory, lstCategoryName
+
+
+def GetCategories(categories, categoriesName, selectedCategoriesName):
+    """
+    Lọc danh mục đã chọn từ danh sách categories và categoriesName.
+    """
+    lstCategories = []
+    for selectedName in selectedCategoriesName:
+        for i, name in enumerate(categoriesName):
+            if selectedName == name:
+                lstCategories.append(categories[i])
+    return lstCategories
+
+
+def SelectElementsByCategory(selectedCategories):
+    """
+    Chọn các phần tử trong view hiện tại dựa trên danh sách Category được tick.
+    """
+    selectedElements = []
+    for category in selectedCategories:
+        if category:
+            collector = FilteredElementCollector(doc) \
+                .OfCategoryId(category.Id) \
+                .WhereElementIsNotElementType() \
+                .ToElements()
+            selectedElements.extend(collector)
+
+    if selectedElements:
+        selection.SetElementIds(List[ElementId]([e.Id for e in selectedElements]))
+    else:
+        ShowNotification("Erro", "Can not find any Elements")
+
+
 """----------------------MAIN CODE----------------------------"""
 
 try:
-    # Ask the user to select linked elements in the Revit model
-    eleRef = selection.PickObjects(ObjectType.LinkedElement, "Select Elements to check IDs")
+    # Ví dụ sử dụng
+    categories, categoriesName = GetAllCategory()
 
-    eleLst = []  # Initialize an empty list to store the linked elements
+    """------------RUN FORM----------"""
+    openForm = True
+    while openForm:
 
-    for e in eleRef:
-        ele = doc.GetElement(e)  # Get the selected element in the main document
+        # Mở form với dữ liệu hiện tại
+        f = MainForm(categoriesName)
+        f.ShowDialog()
 
-        # Check if the selected element is a RevitLinkInstance
-        if isinstance(ele, RevitLinkInstance):
-            docLink = ele.GetLinkDocument()  # Get the linked document
-            if docLink:  # Ensure the linked document is valid
-                eleLink = docLink.GetElement(e.LinkedElementId)  # Get the element from the linked document
-                eleLst.append(eleLink)  # Append the linked element to the list
+        # Lấy danh mục đã chọn
+        selectedCategoriesName = [item.Text for item in f._listView.Items if item.Checked]
+        selectedCategories = GetCategories(categories, categoriesName, selectedCategoriesName)
+        a = [i.Id for i in selectedCategories]
 
-    # Extract the names and IDs of the linked elements
-    nameLst = [e.Name for e in eleLst if eleLst]  # Get the names of the linked elements
-    idLst = [i.Id.IntegerValue for i in eleLst if eleLst]  # Get the integer IDs of the linked elements
+        # User cancel
+        if f.DialogResult != System.Windows.Forms.DialogResult.OK:
+            break
 
-    # Print the results to the console
-    print("Selected Linked Element Names:")
-    print(nameLst)
-    print(50 * "-")  # Print a separator line
-    print("Selected Linked Element IDs:")
-    print(idLst)
+        elif f.DialogResult == System.Windows.Forms.DialogResult.OK:
+            # print(a)
 
-# Handle the case when the user cancels the operation
+            # Gọi hàm để chọn các phần tử trong view dựa trên danh sách tick
+            SelectElementsByCategory(selectedCategories)
+            openForm = False
+
 except Autodesk.Revit.Exceptions.OperationCanceledException:
     pass
 
-# Handle any other exceptions and show an error message
 except Exception as ex:
-    TaskDialog.Show("Error", "Warning: {}".format(ex))  # Display a task dialog with the error message
+    TaskDialog.Show("Error", "Warning: {}".format(ex))  # Corrected string formatting
