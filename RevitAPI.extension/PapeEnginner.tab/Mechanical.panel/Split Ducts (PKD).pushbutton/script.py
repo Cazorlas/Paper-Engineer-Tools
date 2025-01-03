@@ -51,11 +51,11 @@ version = int(app.VersionNumber)
 class SelectionFilter(ISelectionFilter):
     """Filter to select only elements of a specific category."""
 
-    def __init__(self, categoryName):
-        self.categoryName = categoryName
+    def __init__(self, category_name):
+        self.category_name = category_name
 
     def AllowElement(self, e):
-        if e.Category and e.Category.Name == self.categoryName:
+        if e.Category and e.Category.Name == self.category_name:
             return True
         return False
 
@@ -63,52 +63,16 @@ class SelectionFilter(ISelectionFilter):
         return False
 
 
-def GetCeilings():
-    """Get ceiling"""
-    refCeiling = uidoc.Selection.PickObjects(ObjectType.Element, SelectionFilter('Ceilings'), 'Select Ceiling')
-    ceilings = [doc.GetElement(ref.ElementId) for ref in refCeiling]
+def CollectDuctManual():
+    return uidoc.Selection.PickObjects(ObjectType.Element, SelectionFilter('Ducts'), 'Select Ducts')
 
-    return ceilings
-
-
-def GetFillPatternsFromCeilings(ceilings):
-    """
-    Retrieve Fill Patterns from the selected ceilings.
-    Parameters:
-        ceilings (List[Element]): List of Ceiling elements.
-    Returns:
-        List[str]: A list of Fill Pattern names from each ceiling.
-    """
-    fillPatterns = []
-    fillPatternsName = []
-    for ceiling in ceilings:
-        bottomFaces = HostObjectUtils.GetBottomFaces(ceiling)
-        for faceRef in bottomFaces:
-            face = ceiling.GetGeometryObjectFromReference(faceRef)
-            if face.MaterialElementId != ElementId.InvalidElementId:
-                material = doc.GetElement(face.MaterialElementId)
-                if material and material.SurfaceForegroundPatternId != ElementId.InvalidElementId:
-                    pattern = doc.GetElement(material.SurfaceForegroundPatternId)
-                    if pattern:
-                        fillPatternsName.append(pattern.Name)
-                        fillPatterns.append(pattern)
-                        break
-    return fillPatterns,fillPatternsName
-
-#def
 
 """----------------------MAIN CODE----------------------------"""
 try:
+    refDucts = CollectDuctManual()
+    ductEles = [doc.GetElement(duct.ElementId) for duct in refDucts]
 
-    # Select ceilings from the user
-    ceilings = GetCeilings()
-
-    # Extract Fill Patterns from selected ceilings
-    fillPatterns,fillPatternsName = GetFillPatternsFromCeilings(ceilings)
-
-    print(fillPatterns)
-
-
+    print(ductEles)
 
 
 except Autodesk.Revit.Exceptions.OperationCanceledException:

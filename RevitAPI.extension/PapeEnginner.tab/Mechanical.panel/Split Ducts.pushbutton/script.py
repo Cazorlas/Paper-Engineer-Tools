@@ -63,12 +63,25 @@ class SelectionFilter(ISelectionFilter):
         return False
 
 
-# def tolist(obj):
-#     """Ensure the object is a list."""
-#     if hasattr(obj, "__iter__"):
-#         return obj
-#     else:
-#         return [obj]
+def CollectDuctAuto():
+    return FilteredElementCollector(doc, view.Id).OfCategory(
+        BuiltInCategory.OST_DuctCurves).WhereElementIsNotElementType().ToElements()
+
+
+def CollectDuctManual():
+    return uidoc.Selection.PickObjects(ObjectType.Element, SelectionFilter('Ducts'), 'Select Ducts')
+
+
+def GetValidDuct(ducts, desired_length):
+    valid_ducts = []
+
+    for duct in ducts:
+        family = duct.LookupParameter('Family').AsValueString()
+        duct_length_check = duct.LookupParameter('Length').AsDouble()  # ft
+        if duct_length_check > desired_length:
+            valid_ducts.append(duct)
+
+    return valid_ducts
 
 
 def closest_connectors(el1, el2):
@@ -96,7 +109,7 @@ def check_dir(conn1, conn2):
         return False
 
 
-def createFittings(ele1, ele2):
+def CreateFittings(ele1, ele2):
     """Create fittings between two elements if possible."""
     fittings = []
     connectors = closest_connectors(ele1, ele2)
@@ -158,26 +171,19 @@ try:
         # Check if Auto Mode or Manual Mode is selected
         if auto_mode:
             # Collect all ducts in the active view
-            collector_ducts = FilteredElementCollector(doc, view.Id).OfCategory(
-                BuiltInCategory.OST_DuctCurves).WhereElementIsNotElementType().ToElements()
+            collector_ducts = CollectDuctAuto()
             ducts_eles = [doc.GetElement(s.Id) for s in collector_ducts]
         elif manual_mode:
             # Manual duct selection
-            collector_ducts = uidoc.Selection.PickObjects(ObjectType.Element, SelectionFilter('Ducts'), 'Select Ducts')
+            collector_ducts = CollectDuctManual()
             ducts_eles = [doc.GetElement(s.ElementId) for s in collector_ducts]
 
         if len(ducts_eles) == 0:
             TaskDialog.Show("Error", "There is no Selected Ducts")
         else:
             # Filter Ducts
-            valid_ducts = []
             desired_length = cut_length / 304.8  # ft
-
-            for duct in ducts_eles:
-                family = duct.LookupParameter('Family').AsValueString()
-                duct_length_check = duct.LookupParameter('Length').AsDouble()  # ft
-                if duct_length_check > desired_length:
-                    valid_ducts.append(duct)
+            valid_ducts = GetValidDuct(ducts_eles, desired_length)
 
             # Begin transaction group for splitting ducts
             tg = TransactionGroup(doc, 'Split Ducts')
@@ -231,7 +237,7 @@ try:
                     t.Commit()
 
                     for ele1, ele2 in zip(new_list1_duct, new_list2_duct):
-                        createFittings(ele1, ele2)
+                        CreateFittings(ele1, ele2)
 
             tg.Assimilate()  # Finalize transaction group
 
