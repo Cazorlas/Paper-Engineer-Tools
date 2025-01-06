@@ -148,7 +148,7 @@ class MainForm(Form):
         # OKbutton
         self._OKbutton.Font = System.Drawing.Font("Microsoft Sans Serif", 10, System.Drawing.FontStyle.Regular,
                                                   System.Drawing.GraphicsUnit.Point, 0)
-        self._OKbutton.Location = System.Drawing.Point(118, 200)
+        self._OKbutton.Location = System.Drawing.Point(150, 190)
         self._OKbutton.Name = "OKbutton"
         self._OKbutton.Size = System.Drawing.Size(78, 31)
         self._OKbutton.TabIndex = 1
@@ -160,7 +160,7 @@ class MainForm(Form):
         self._Cancelbutton.DialogResult = DialogResult.Cancel
         self._Cancelbutton.Font = System.Drawing.Font("Microsoft Sans Serif", 10, System.Drawing.FontStyle.Regular,
                                                       System.Drawing.GraphicsUnit.Point, 0)
-        self._Cancelbutton.Location = System.Drawing.Point(247, 200)
+        self._Cancelbutton.Location = System.Drawing.Point(247, 190)
         self._Cancelbutton.Name = "Cancelbutton"
         self._Cancelbutton.Size = System.Drawing.Size(83, 31)
         self._Cancelbutton.TabIndex = 2

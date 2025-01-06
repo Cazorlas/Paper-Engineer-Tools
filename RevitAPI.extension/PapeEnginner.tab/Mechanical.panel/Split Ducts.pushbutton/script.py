@@ -151,7 +151,8 @@ def GetUnionThickness(unionFamily):
     familyConnector = GetConnectorsFromDocument(UnionfamilyDoc)
     connectorPoint1 = familyConnector[0].Origin
     connectorPoint2 = familyConnector[1].Origin
-    distanceConnector = round(connectorPoint1.DistanceTo(connectorPoint2) * 304.8)
+    distanceConnector = connectorPoint1.DistanceTo(connectorPoint2) * 304.8
+    # distanceConnector = round(connectorPoint1.DistanceTo(connectorPoint2) * 304.8)
     return distanceConnector
 
 
