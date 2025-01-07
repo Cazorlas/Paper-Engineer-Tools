@@ -1,10 +1,8 @@
-titile: Show Hide Bubble Grids
+titile: Reset Override
 
 tooltip: >-    
     
-    Select at lest one direction. 
-    
-    Only work for XY grids
+    Use this script to reset the Override of your selected elements
 
 
 help_url: "https://www.youtube.com/@paper.engineer"

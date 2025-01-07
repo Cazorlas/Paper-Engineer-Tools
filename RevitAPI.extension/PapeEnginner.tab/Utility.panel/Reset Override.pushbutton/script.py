@@ -42,35 +42,51 @@ app = __revit__.Application
 DB = Autodesk.Revit.DB
 output = script.get_output()
 unit = doc.GetUnits()
+selection = uidoc.Selection
 version = int(app.VersionNumber)
 
 """ ----------------------FUNCTIONS----------------------------"""
 
 
 # Hàm Reset Overrides cho các đối tượng được chọn (PascalCase)
-def ResetElementOverrides(doc, view, selectedIds):
+def ResetElementOverrides(doc, view, selectedEle):
     overrideSettings = OverrideGraphicSettings()
 
-    with Transaction(doc, "Reset Element Overrides") as tx:
+    with Transaction(doc, "Reset Element Overrides") as t:
         try:
-            tx.Start()
-            for elementId in selectedIds:
-                element = doc.GetElement(elementId)
+            t.Start()
+            for e in selectedEle:
+                element = doc.GetElement(e)
                 if element:
                     view.SetElementOverrides(element.Id, overrideSettings)
 
-            tx.Commit()
+            t.Commit()
             ShowNotification("Success", "Overrides have been reset for selected elements.")
         except Exception as ex:
-            tx.RollBack()
+            t.RollBack()
             ShowNotification("Error", "Failed to reset overrides: {}".format(str(ex)))
 
 
 """ ---------------------------MAIN------------------------------"""
-# Lấy các đối tượng được chọn
-selectedIds = uidoc.Selection.GetElementIds()
 
-if selectedIds:
-    ResetElementOverrides(doc, view, selectedIds)
-else:
-    ShowNotification("No Selection", "Please select elements to reset overrides.")
+
+"""----------------------MAIN CODE----------------------------"""
+try:
+
+    # Lấy các đối tượng được chọn
+    selectedEle = selection.GetElementIds()
+
+    if selectedEle:
+        ResetElementOverrides(doc, view, selectedEle)
+    else:
+        ShowNotification("No Selection", "Please select elements to reset overrides.")
+
+
+
+
+except Autodesk.Revit.Exceptions.OperationCanceledException:
+    pass
+
+except Exception as ex:
+    TaskDialog.Show("Error", "Warning: {}".format(ex))  # Corrected string formatting
+
