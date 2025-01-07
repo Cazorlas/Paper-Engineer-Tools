@@ -3,7 +3,6 @@
 import clr  # Common Language Runtime for .NET
 import System
 import math  # Standard Python math library
-# from MainForm import MainForm
 
 # Import necessary .NET and Revit API libraries
 from System.Collections.Generic import *
@@ -15,7 +14,7 @@ from Autodesk.DesignScript.Geometry import *  # Import everything from Dynamo's 
 clr.AddReference("RevitAPI")  # Revit API DLLs
 clr.AddReference("RevitAPIUI")  # Revit UI DLLs
 
-from MainForm import *
+from SubForm import *
 
 import Autodesk
 from Autodesk.Revit.DB import *  # Revit API classes
@@ -48,35 +47,30 @@ version = int(app.VersionNumber)
 """ ----------------------FUNCTIONS----------------------------"""
 
 
-class SelectionFilter(ISelectionFilter):
-    """Filter to select only elements of a specific category."""
+# Hàm Reset Overrides cho các đối tượng được chọn (PascalCase)
+def ResetElementOverrides(doc, view, selectedIds):
+    overrideSettings = OverrideGraphicSettings()
 
-    def __init__(self, category_name):
-        self.category_name = category_name
+    with Transaction(doc, "Reset Element Overrides") as tx:
+        try:
+            tx.Start()
+            for elementId in selectedIds:
+                element = doc.GetElement(elementId)
+                if element:
+                    view.SetElementOverrides(element.Id, overrideSettings)
 
-    def AllowElement(self, e):
-        if e.Category and e.Category.Name == self.category_name:
-            return True
-        return False
-
-    def AllowReference(self, ref, point):
-        return False
-
-
-def CollectDuctManual():
-    return uidoc.Selection.PickObjects(ObjectType.Element, SelectionFilter('Ducts'), 'Select Ducts')
-
-
-"""----------------------MAIN CODE----------------------------"""
-try:
-    refDucts = CollectDuctManual()
-    ductEles = [doc.GetElement(duct.ElementId) for duct in refDucts]
+            tx.Commit()
+            ShowNotification("Success", "Overrides have been reset for selected elements.")
+        except Exception as ex:
+            tx.RollBack()
+            ShowNotification("Error", "Failed to reset overrides: {}".format(str(ex)))
 
 
+""" ---------------------------MAIN------------------------------"""
+# Lấy các đối tượng được chọn
+selectedIds = uidoc.Selection.GetElementIds()
 
-
-except Autodesk.Revit.Exceptions.OperationCanceledException:
-    pass
-
-except Exception as ex:
-    TaskDialog.Show("Error", "Warning: {}".format(ex))  # Corrected string formatting
+if selectedIds:
+    ResetElementOverrides(doc, view, selectedIds)
+else:
+    ShowNotification("No Selection", "Please select elements to reset overrides.")
