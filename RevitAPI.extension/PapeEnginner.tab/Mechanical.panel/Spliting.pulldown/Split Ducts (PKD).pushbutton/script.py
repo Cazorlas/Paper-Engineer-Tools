@@ -1,77 +1,43 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-import clr  # Common Language Runtime for .NET
+
+
+import clr
+import math
 import System
-import math  # Standard Python math library
+import sys
 
 # Import necessary .NET and Revit API libraries
 from System.Collections.Generic import *
-from pyrevit import forms, revit, script
 
-from rpw.ui.forms import (FlexForm, Label, Separator, ComboBox, CheckBox, Button, TextBox)
-from SubForm import ShowNotification
-
-clr.AddReference('ProtoGeometry')  # Dynamo's geometry proxy
-from Autodesk.DesignScript.Geometry import *  # Import everything from Dynamo's geometry
-
-clr.AddReference("RevitAPI")  # Revit API DLLs
-clr.AddReference("RevitAPIUI")  # Revit UI DLLs
-
+clr.AddReference('RevitAPI')
+clr.AddReference('RevitAPIUI')
 
 import Autodesk
-from Autodesk.Revit.DB import *  # Revit API classes
-from Autodesk.Revit.UI import *  # Revit UI classes
+from Autodesk.Revit.UI import *
+from Autodesk.Revit.UI.Selection import *
 from Autodesk.Revit.UI.Selection import *  # For handling Revit selections
 from Autodesk.Revit.DB.Mechanical import Duct, MechanicalUtils
 from Autodesk.Revit.DB.Plumbing import Pipe, PlumbingUtils
 
-clr.AddReference("RevitNodes")  # Dynamo nodes for Revit
-import Revit  # Import Revit namespace in RevitNodes
-
-clr.ImportExtensions(Revit.Elements)
-clr.ImportExtensions(Revit.GeometryConversion)
-
-clr.AddReference("RevitServices")
-import RevitServices
-from RevitServices.Persistence import DocumentManager  # Document management in Revit
-from RevitServices.Transactions import TransactionManager  # Transaction management
-"""
-
-import clr  # Common Language Runtime for .NET
-import System
-import math  # Standard Python math library
-
-# Import necessary .NET and Revit API libraries
-from System.Collections.Generic import *
+from rpw.ui.forms import FlexForm, Label, ComboBox, TextBox, Separator, Button, CommandLink, TaskDialog, CheckBox
 from pyrevit import forms, revit, script
-
-import rpw
-from rpw import revit, db, ui, DB, UI
-from rpw.ui.forms import (FlexForm, Label, ComboBox, Separator, CheckBox, Button, TextBox)
 from SubForm import ShowNotification
 
 clr.AddReference('ProtoGeometry')  # Dynamo's geometry proxy
 from Autodesk.DesignScript.Geometry import *  # Import everything from Dynamo's geometry
 
-clr.AddReference("RevitAPI")  # Revit API DLLs
-clr.AddReference("RevitAPIUI")  # Revit UI DLLs
-
-import Autodesk
-from Autodesk.Revit.DB import *  # Revit API classes
-from Autodesk.Revit.UI import *  # Revit UI classes
-from Autodesk.Revit.UI.Selection import *  # For handling Revit selections
-# from Autodesk.Revit.DB.Mechanical import Duct, MechanicalUtils
-# from Autodesk.Revit.DB.Plumbing import Pipe, PlumbingUtils
+import Revit  # Import Revit namespace in RevitNodes
 
 clr.AddReference("RevitNodes")  # Dynamo nodes for Revit
-import Revit  # Import Revit namespace in RevitNodes
 
 clr.ImportExtensions(Revit.Elements)
 clr.ImportExtensions(Revit.GeometryConversion)
 
-clr.AddReference("RevitServices")
 import RevitServices
+
+clr.AddReference("RevitServices")
+
 from RevitServices.Persistence import DocumentManager  # Document management in Revit
 from RevitServices.Transactions import TransactionManager  # Transaction management
 
@@ -207,7 +173,7 @@ try:
                   Separator(),  # Dấu phân cách làm tiêu đề
                   # ComboBox('combobox1', abc),  # Hộp chọn với các tùy chọn
                   Separator(),  # Dấu phân cách
-                  ComboBox('textbox1', {'Enter Text': 'Default Value'}),  # Hộp chọn thay thế TextBox
+                  ComboBox('textbox1', abc),  # Hộp chọn thay thế TextBox
                   CheckBox('checkbox1', 'Check this'),  # Ô chọn (Checkbox)
                   Separator(),  # Dấu ngăn cách
                   Button('Select')  # Nút bấm
