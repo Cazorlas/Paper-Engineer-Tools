@@ -98,33 +98,8 @@ def CollectLinkData():
     externalFileRef = [link.GetExternalFileReference() for link in linkType]
     docLink = [ref.GetLinkDocument() for ref in refLinkInstance]
 
-    #
-    pathName = [
-        ModelPathUtils.ConvertModelPathToUserVisiblePath(i.GetAbsolutePath()) for i in externalFileRef
-    ]
-    #
-    nameLink = [link.LookupParameter("Type Name").AsString() for link in linkType] if linkType else [
+    nameLink = ["No Link"] + [link.LookupParameter("Type Name").AsString() for link in linkType] if linkType else [
         "There is no Link Model"]
-    #
-    statusLoad = ["Loaded" if i is not None else "Not Loaded" for i in docLink]
-    #
-    linkWorkset = []
-    for link in refLinkInstance:
-        worksetId = link.WorksetId
-        worksetTable = doc.GetWorksetTable()
-        workset = worksetTable.GetWorkset(worksetId)
-        linkWorkset.append(workset)
-    linkWorksetName = [i.Name for i in linkWorkset]
-    #
-    referenceType = [
-        "Overlay" if hasattr(link, "AttachmentType") and link.AttachmentType == AttachmentType.Overlay
-        else "Attachment" if hasattr(link, "AttachmentType")
-        else "Unknown"
-        for link in linkType
-    ]
-    #
-    worksetCollector = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset).ToWorksets()
-    worksetName = [i.Name for i in worksetCollector] if worksetCollector else ["Not a working share file"]
 
     return nameLink, refLinkInstance
 
@@ -138,7 +113,7 @@ def GetWalls(refLinkInstance, linkName):
     """
     linkType = [doc.GetElement(ref.GetTypeId()) for ref in refLinkInstance]
 
-    if linkName == "There is no Link Model":
+    if linkName == "There is no Link Model" or linkName == "No Link":
         # Collect walls from the active view in the current document
         refwalls = FilteredElementCollector(doc, view.Id).OfCategory(
             BuiltInCategory.OST_Walls).WhereElementIsNotElementType().ToElements()
@@ -147,19 +122,19 @@ def GetWalls(refLinkInstance, linkName):
         # Check if the selected link exists in the document
 
         for refLink in refLinkInstance:
-            linkedDocument = refLink.GetLinkDocument()
-            for link in linkType:
-                linkTypeName = link.LookupParameter("Type Name").AsString()
-                if linkTypeName == linkName:
-                    # Get the linked document
-                    if linkedDocument:
-                        # Collect walls from the active view of the linked document
-                        refWalls = FilteredElementCollector(linkedDocument, view.Id).OfCategory(
-                            BuiltInCategory.OST_Walls).WhereElementIsNotElementType().ToElements()
-                        walls = [linkedDocument.GetElement(wall.LinkedElementId) for wall in refWalls]
-                    else:
-                        raise Exception("Linked document is not loaded.")
-                    break
+            linkedDoc = refLink.GetLinkDocument()
+            # if not linkedDoc:
+            #     raise Exception("Linked document '{}' is not loaded.".format(linkName))
+
+            linkTypeName = doc.GetElement(refLink.GetTypeId()).LookupParameter("Type Name").AsString()
+            if linkTypeName == linkName:
+                # Thu thập tường từ view hiện tại trong tài liệu liên kết
+                refWalls = FilteredElementCollector(linkedDoc, linkedDoc.ActiveView.Id) \
+                    .OfCategory(BuiltInCategory.OST_Walls) \
+                    .WhereElementIsNotElementType() \
+                    .ToElements()
+                walls = [linkedDoc.GetElement(wall.LinkedElementId) for wall in refWalls]
+                break
 
     return walls
 
