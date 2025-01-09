@@ -5,7 +5,6 @@
 import clr
 import math
 import System
-import sys
 
 # Import necessary .NET and Revit API libraries
 from System.Collections.Generic import *
@@ -17,12 +16,14 @@ import Autodesk
 from Autodesk.Revit.UI import *
 from Autodesk.Revit.UI.Selection import *
 from Autodesk.Revit.UI.Selection import *  # For handling Revit selections
+from Autodesk.Revit.DB import *  # Revit API classes
 from Autodesk.Revit.DB.Mechanical import Duct, MechanicalUtils
 from Autodesk.Revit.DB.Plumbing import Pipe, PlumbingUtils
 
 from rpw.ui.forms import FlexForm, Label, ComboBox, TextBox, Separator, Button, CommandLink, TaskDialog, CheckBox
 from pyrevit import forms, revit, script
 from SubForm import ShowNotification
+from MainForm import MainForm
 
 clr.AddReference('ProtoGeometry')  # Dynamo's geometry proxy
 from Autodesk.DesignScript.Geometry import *  # Import everything from Dynamo's geometry
@@ -30,14 +31,12 @@ from Autodesk.DesignScript.Geometry import *  # Import everything from Dynamo's 
 import Revit  # Import Revit namespace in RevitNodes
 
 clr.AddReference("RevitNodes")  # Dynamo nodes for Revit
+clr.AddReference("RevitServices")
 
 clr.ImportExtensions(Revit.Elements)
 clr.ImportExtensions(Revit.GeometryConversion)
 
 import RevitServices
-
-clr.AddReference("RevitServices")
-
 from RevitServices.Persistence import DocumentManager  # Document management in Revit
 from RevitServices.Transactions import TransactionManager  # Transaction management
 
@@ -79,15 +78,90 @@ def CollectDuctManual():
 
 
 def GetValidDuct(ducts, desired_length):
-    valid_ducts = []
+    validDucts = []
 
     for duct in ducts:
         family = duct.LookupParameter('Family').AsValueString()
         duct_length_check = duct.LookupParameter('Length').AsDouble()  # ft
         if duct_length_check > desired_length:
-            valid_ducts.append(duct)
+            validDucts.append(duct)
 
-    return valid_ducts
+    return validDucts
+
+
+def CollectLinkData():
+    """
+    Collect all required data about Revit links in the model.
+    """
+    refLinkInstance = FilteredElementCollector(doc).OfClass(RevitLinkInstance).ToElements()
+    linkType = [doc.GetElement(ref.GetTypeId()) for ref in refLinkInstance]
+    externalFileRef = [link.GetExternalFileReference() for link in linkType]
+    docLink = [ref.GetLinkDocument() for ref in refLinkInstance]
+
+    #
+    pathName = [
+        ModelPathUtils.ConvertModelPathToUserVisiblePath(i.GetAbsolutePath()) for i in externalFileRef
+    ]
+    #
+    nameLink = [link.LookupParameter("Type Name").AsString() for link in linkType] if linkType else [
+        "There is no Link Model"]
+    #
+    statusLoad = ["Loaded" if i is not None else "Not Loaded" for i in docLink]
+    #
+    linkWorkset = []
+    for link in refLinkInstance:
+        worksetId = link.WorksetId
+        worksetTable = doc.GetWorksetTable()
+        workset = worksetTable.GetWorkset(worksetId)
+        linkWorkset.append(workset)
+    linkWorksetName = [i.Name for i in linkWorkset]
+    #
+    referenceType = [
+        "Overlay" if hasattr(link, "AttachmentType") and link.AttachmentType == AttachmentType.Overlay
+        else "Attachment" if hasattr(link, "AttachmentType")
+        else "Unknown"
+        for link in linkType
+    ]
+    #
+    worksetCollector = FilteredWorksetCollector(doc).OfKind(WorksetKind.UserWorkset).ToWorksets()
+    worksetName = [i.Name for i in worksetCollector] if worksetCollector else ["Not a working share file"]
+
+    return nameLink, refLinkInstance
+
+
+def GetWalls(refLinkInstance, linkName):
+    """
+    Collect all Wall Instances from the active view or a linked model.
+    :param linkType: List of RevitLinkType elements in the model.
+    :param linkName: Selected name of the link from the ComboBox.
+    :return: List of Wall Instances.
+    """
+    linkType = [doc.GetElement(ref.GetTypeId()) for ref in refLinkInstance]
+
+    if linkName == "There is no Link Model":
+        # Collect walls from the active view in the current document
+        refwalls = FilteredElementCollector(doc, view.Id).OfCategory(
+            BuiltInCategory.OST_Walls).WhereElementIsNotElementType().ToElements()
+        walls = [doc.GetElement(wall.Id) for wall in refwalls]
+    else:
+        # Check if the selected link exists in the document
+
+        for refLink in refLinkInstance:
+            linkedDocument = refLink.GetLinkDocument()
+            for link in linkType:
+                linkTypeName = link.LookupParameter("Type Name").AsString()
+                if linkTypeName == linkName:
+                    # Get the linked document
+                    if linkedDocument:
+                        # Collect walls from the active view of the linked document
+                        refWalls = FilteredElementCollector(linkedDocument, view.Id).OfCategory(
+                            BuiltInCategory.OST_Walls).WhereElementIsNotElementType().ToElements()
+                        walls = [linkedDocument.GetElement(wall.LinkedElementId) for wall in refWalls]
+                    else:
+                        raise Exception("Linked document is not loaded.")
+                    break
+
+    return walls
 
 
 def ClosestConnectors(el1, el2):
@@ -166,34 +240,61 @@ def GetUnionThickness(unionFamily):
 try:
     # refDucts = CollectDuctManual()
     # ductEles = [doc.GetElement(duct.ElementId) for duct in refDucts]
-    abc = {'Option 1': 10.0, 'Option 2': 20.0}
 
-    # Khởi tạo các thành phần của Form
-    components = [Label('Pick Style:'),
-                  Separator(),  # Dấu phân cách làm tiêu đề
-                  # ComboBox('combobox1', abc),  # Hộp chọn với các tùy chọn
-                  Separator(),  # Dấu phân cách
-                  ComboBox('textbox1', abc),  # Hộp chọn thay thế TextBox
-                  CheckBox('checkbox1', 'Check this'),  # Ô chọn (Checkbox)
-                  Separator(),  # Dấu ngăn cách
-                  Button('Select')  # Nút bấm
-                  ]
+    # abc = {'Option 1': 10.0, 'Option 2': 20.0}
+    #
+    # # Khởi tạo các thành phần của Form
+    # components = [Label('Pick Style:'),
+    #               Separator(),  # Dấu phân cách làm tiêu đề
+    #               # ComboBox('combobox1', abc),  # Hộp chọn với các tùy chọn
+    #               Separator(),  # Dấu phân cách
+    #               ComboBox('textbox1', abc),  # Hộp chọn thay thế TextBox
+    #               CheckBox('checkbox1', 'Check this'),  # Ô chọn (Checkbox)
+    #               Separator(),  # Dấu ngăn cách
+    #               Button('Select')  # Nút bấm
+    #               ]
+    #
+    # # Tạo và hiển thị FlexForm
+    # form = FlexForm('My Custom Form', components)
+    # result = form.show()
+    #
+    # # Xử lý kết quả từ Form
+    # if result:
+    #     selected_option = result.get('combobox1')
+    #     entered_text = result.get('textbox1')
+    #     checkbox_state = result.get('checkbox1')
+    # else:
+    #     pass
 
-    # Tạo và hiển thị FlexForm
-    form = FlexForm('My Custom Form', components)
-    result = form.show()
+    nameLink, refLinkInstance = CollectLinkData()
+    """----------------------------RUN FORMS----------------------------"""
 
-    # Xử lý kết quả từ Form
-    if result:
-        selected_option = result.get('combobox1')
-        entered_text = result.get('textbox1')
-        checkbox_state = result.get('checkbox1')
+    f = MainForm(nameLink)
+    f.ShowDialog()
 
+    # If 'OK' is clicked on the form
+    if f.DialogResult == System.Windows.Forms.DialogResult.OK:
+        # Get the desired length from the form input
+        autoMode = f._radioButtonAuto.Checked
+        manualMode = f._radioButtonManual.Checked
+        stepLength = float(f._textBoxStep.Text)  # mm
+        stepWall = float(f._textBoxWall.Text)
+        linkName = f._comboBoxLink.Text
 
+        # Gọi hàm GetWalls để lấy danh sách tường
+        walls = GetWalls(refLinkInstance, linkName)
 
+        print(walls)
 
-    else:
-        pass
+        # Check if Auto Mode or Manual Mode is selected
+        if autoMode:
+            # Collect all ducts in the active view
+            collectorDucts = CollectDuctAuto()
+            ductsEles = [doc.GetElement(s.Id) for s in collectorDucts]
+        elif manualMode:
+            # Manual duct selection
+            collectorDucts = CollectDuctManual()
+            ductsEles = [doc.GetElement(s.ElementId) for s in collectorDucts]
 
 
 
