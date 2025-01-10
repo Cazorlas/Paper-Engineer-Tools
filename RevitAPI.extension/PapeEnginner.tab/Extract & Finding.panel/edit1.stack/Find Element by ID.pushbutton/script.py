@@ -137,9 +137,9 @@ def SelectLinkELementById(docLink, linkSelected, lstEleId):
         Select elements in the linked file based on a list of IDs.
 
         Parameters:
-        - docLink: Document of the linked file.
-        - linkSelected: RevitLinkInstance representing the linked file.
-        - lstEleId: List of ElementIds to select.
+        :param docLink: Document of the linked file.
+        :param linkSelected: RevitLinkInstance representing the linked file.
+        :param lstEleId: List of ElementIds to select.
     """
 
     selReferences = []

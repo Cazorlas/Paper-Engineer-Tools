@@ -20,9 +20,9 @@ from Autodesk.Revit.DB import *  # Revit API classes
 from Autodesk.Revit.DB.Mechanical import Duct, MechanicalUtils
 from Autodesk.Revit.DB.Plumbing import Pipe, PlumbingUtils
 
-from rpw.ui.forms import FlexForm, Label, ComboBox, TextBox, Separator, Button, CommandLink, TaskDialog, CheckBox
+from rpw.ui.forms import FlexForm, Label, ComboBox, TextBox, Separator, Button, CommandLink, CheckBox
 from pyrevit import forms, revit, script
-from SubForm import ShowNotification
+# from SubForm import ShowNotification
 from MainForm import MainForm
 
 clr.AddReference('ProtoGeometry')  # Dynamo's geometry proxy
@@ -77,13 +77,13 @@ def CollectDuctManual():
     return uidoc.Selection.PickObjects(ObjectType.Element, SelectionFilter('Ducts'), 'Select Ducts')
 
 
-def GetValidDuct(ducts, desired_length):
+def GetValidDuct(ducts, stepLength):
     validDucts = []
 
     for duct in ducts:
         family = duct.LookupParameter('Family').AsValueString()
         duct_length_check = duct.LookupParameter('Length').AsDouble()  # ft
-        if duct_length_check > desired_length:
+        if duct_length_check > stepLength:
             validDucts.append(duct)
 
     return validDucts
@@ -101,17 +101,17 @@ def CollectLinkData():
     nameLink = ["No Link"] + [link.LookupParameter("Type Name").AsString() for link in linkType] if linkType else [
         "There is no Link Model"]
 
-    return nameLink, refLinkInstance
+    return nameLink, refLinkInstance, docLink
 
 
 def GetWalls(refLinkInstance, linkName):
     """
     Collect all Wall Instances from the active view or a linked model.
-    :param linkType: List of RevitLinkType elements in the model.
+    :param refLinkInstance: List of LinkInstance elements in the model.
     :param linkName: Selected name of the link from the ComboBox.
     :return: List of Wall Instances.
     """
-    linkType = [doc.GetElement(ref.GetTypeId()) for ref in refLinkInstance]
+    # linkType = [doc.GetElement(ref.GetTypeId()) for ref in refLinkInstance]
 
     if linkName == "There is no Link Model" or linkName == "No Link":
         # Collect walls from the active view in the current document
@@ -122,21 +122,46 @@ def GetWalls(refLinkInstance, linkName):
         # Check if the selected link exists in the document
 
         for refLink in refLinkInstance:
-            linkedDoc = refLink.GetLinkDocument()
+            linkType = doc.GetElement(refLink.GetTypeId())
+            linkTypeName = linkType.LookupParameter("Type Name").AsString()
+
             # if not linkedDoc:
             #     raise Exception("Linked document '{}' is not loaded.".format(linkName))
 
-            linkTypeName = doc.GetElement(refLink.GetTypeId()).LookupParameter("Type Name").AsString()
             if linkTypeName == linkName:
+                linkedDoc = refLink.GetLinkDocument()
                 # Thu thập tường từ view hiện tại trong tài liệu liên kết
-                refWalls = FilteredElementCollector(linkedDoc, linkedDoc.ActiveView.Id) \
-                    .OfCategory(BuiltInCategory.OST_Walls) \
-                    .WhereElementIsNotElementType() \
-                    .ToElements()
-                walls = [linkedDoc.GetElement(wall.LinkedElementId) for wall in refWalls]
+                walls = FilteredElementCollector(linkedDoc, view.Id).OfCategory(
+                    BuiltInCategory.OST_Walls).WhereElementIsNotElementType().ToElements()
+                # walls = [linkedDoc.GetElement(wall.LinkedElementId) for wall in refWalls]
                 break
 
     return walls
+
+
+def GetIntersectingElements(document, lstA, lstB):
+    """
+    Kiểm tra giao cắt giữa hai danh sách phần tử.
+    :param doc: Tài liệu Revit hiện tại.
+    :param listA: Danh sách các phần tử đầu tiên.
+    :param listB: Danh sách các phần tử thứ hai.
+    :return: Dictionary chứa các phần tử giao cắt.
+    """
+    intersectingElements = []
+
+    for eleA in lstA:
+        filter = ElementIntersectsElementFilter(eleA)
+        intersectingCollector = FilteredElementCollector(document, view.Id).WherePasses(
+            filter).WhereElementIsNotElementType().ToElements()
+
+        # Kiểm tra phần tử trong lstB
+        for ele in intersectingCollector:
+            if ele.Id in [b.Id for b in lstB]:
+                intersectingElements.append(eleA)
+                break  # Dừng kiểm tra nếu đã tìm thấy giao cắt
+
+    # print(intersectingCollector)
+    return intersectingElements
 
 
 def ClosestConnectors(el1, el2):
@@ -241,7 +266,8 @@ try:
     # else:
     #     pass
 
-    nameLink, refLinkInstance = CollectLinkData()
+    nameLink, refLinkInstance, docLink = CollectLinkData()
+    dictionary = dict(zip(nameLink, docLink))
     """----------------------------RUN FORMS----------------------------"""
 
     f = MainForm(nameLink)
@@ -259,17 +285,29 @@ try:
         # Gọi hàm GetWalls để lấy danh sách tường
         walls = GetWalls(refLinkInstance, linkName)
 
-        print(walls)
+        if docLink:
+            chooseDocument = dictionary.get("{}".format(linkName))
+        else:
+            chooseDocument = doc
+
+        # print(chooseDocument)
+
+        # print(walls)
 
         # Check if Auto Mode or Manual Mode is selected
         if autoMode:
             # Collect all ducts in the active view
             collectorDucts = CollectDuctAuto()
             ductsEles = [doc.GetElement(s.Id) for s in collectorDucts]
+            intersectingWalls = GetIntersectingElements(chooseDocument, walls, ductsEles)
+            print(intersectingWalls)
         elif manualMode:
             # Manual duct selection
             collectorDucts = CollectDuctManual()
             ductsEles = [doc.GetElement(s.ElementId) for s in collectorDucts]
+            # Check intersections between walls and ducts
+            intersectingWalls = GetIntersectingElements(chooseDocument, walls, ductsEles)
+            print(intersectingWalls)
 
 
 
@@ -279,4 +317,4 @@ except Autodesk.Revit.Exceptions.OperationCanceledException:
 
 except Exception as ex:
     # pass
-    ShowNotification("Error", "Warning: {}".format(ex))  # Corrected string formatting
+    TaskDialog.Show("Error", "Warning: {}".format(ex))  # Corrected string formatting
