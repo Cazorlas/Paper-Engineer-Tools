@@ -95,13 +95,12 @@ def CollectLinkData():
     """
     refLinkInstance = FilteredElementCollector(doc).OfClass(RevitLinkInstance).ToElements()
     linkType = [doc.GetElement(ref.GetTypeId()) for ref in refLinkInstance]
-    externalFileRef = [link.GetExternalFileReference() for link in linkType]
-    docLink = [ref.GetLinkDocument() for ref in refLinkInstance]
+    # docLink = [ref.GetLinkDocument() for ref in refLinkInstance]
 
     nameLink = ["No Link"] + [link.LookupParameter("Type Name").AsString() for link in linkType] if linkType else [
         "There is no Link Model"]
 
-    return nameLink, refLinkInstance, docLink
+    return nameLink, refLinkInstance
 
 
 def GetWalls(refLinkInstance, linkName):
@@ -139,29 +138,82 @@ def GetWalls(refLinkInstance, linkName):
     return walls
 
 
-def GetIntersectingElements(document, lstA, lstB):
+def GetSolidFromElement(element):
+    """
+    Lấy Solid từ một phần tử Revit.
+    :param element: Phần tử Revit.
+    :return: Solid của phần tử hoặc None nếu không có.
+    """
+    options = Options()
+    geometry = element.get_Geometry(options)
+    if geometry is None:
+        return None
+
+    for object in geometry:
+        if isinstance(object, Solid) and object.Volume > 0:
+            return object
+
+    return None
+
+
+def GetIntersectingElements(refLinkInstance, lstA, lstB):
     """
     Kiểm tra giao cắt giữa hai danh sách phần tử.
-    :param doc: Tài liệu Revit hiện tại.
-    :param listA: Danh sách các phần tử đầu tiên.
-    :param listB: Danh sách các phần tử thứ hai.
-    :return: Dictionary chứa các phần tử giao cắt.
+    :param refLinkInstance: Đối tượng liên kết RevitLinkInstance (nếu có).
+    :param lstA: Danh sách các tường (walls).
+    :param lstB: Danh sách các ống gió (ducts).
+    :return: Danh sách các phần tử từ lstA giao cắt với lstB.
     """
     intersectingElements = []
 
+    # Xác định tài liệu và transform (nếu là liên kết)
+    if refLinkInstance:
+        document = refLinkInstance.GetLinkDocument()
+        transform = refLinkInstance.GetTransform()
+    else:
+        document = doc
+        transform = Transform.Identity
+
     for eleA in lstA:
-        filter = ElementIntersectsElementFilter(eleA)
-        intersectingCollector = FilteredElementCollector(document, view.Id).WherePasses(
-            filter).WhereElementIsNotElementType().ToElements()
+        # Lấy Solid từ eleA
+        solidA = GetSolidFromElement(eleA)
+        if not solidA:
+            continue
 
-        # Kiểm tra phần tử trong lstB
-        for ele in intersectingCollector:
-            if ele.Id in [b.Id for b in lstB]:
+        # Áp dụng transform nếu là liên kết
+        solid = SolidUtils.CreateTransformed(solidA, transform.Inverse) if refLinkInstance else solidA
+
+        # Tạo bộ lọc giao cắt Solid
+        solidFilter = ElementIntersectsSolidFilter(solid)
+
+        # Thu thập các phần tử giao cắt với solidA
+        intersectingCollector = FilteredElementCollector(document).WhereElementIsNotElementType().WherePasses(
+            solidFilter).ToElements()
+
+        # Kiểm tra nếu các phần tử trong lstB nằm trong danh sách giao cắt
+        for eleB in intersectingCollector:
+            if eleB.Id in [b.Id for b in lstB]:
                 intersectingElements.append(eleA)
-                break  # Dừng kiểm tra nếu đã tìm thấy giao cắt
+                break  # Dừng kiểm tra nếu tìm thấy phần tử giao cắt
 
-    # print(intersectingCollector)
     return intersectingElements
+
+
+    # for eleA in lstA:
+    #     transform = eleA.GetTransform()
+    #
+    #     filter = ElementIntersectsElementFilter(eleA)
+    #     intersectingCollector = FilteredElementCollector(document, view.Id).WhereElementIsNotElementType().WherePasses(
+    #         filter).ToElements()
+    #
+    #     # Kiểm tra phần tử trong lstB
+    #     for ele in intersectingCollector:
+    #         if ele.Id in [b.Id for b in lstB]:
+    #             intersectingElements.append(eleA)
+    #             break  # Dừng kiểm tra nếu đã tìm thấy giao cắt
+    #
+    # # print(intersectingCollector)
+    # return intersectingElements
 
 
 def ClosestConnectors(el1, el2):
@@ -266,8 +318,10 @@ try:
     # else:
     #     pass
 
-    nameLink, refLinkInstance, docLink = CollectLinkData()
-    dictionary = dict(zip(nameLink, docLink))
+    nameLink, refLinkInstance = CollectLinkData()
+    # print(transform)
+
+    dictionary = dict(zip(nameLink, refLinkInstance))
     """----------------------------RUN FORMS----------------------------"""
 
     f = MainForm(nameLink)
@@ -285,10 +339,10 @@ try:
         # Gọi hàm GetWalls để lấy danh sách tường
         walls = GetWalls(refLinkInstance, linkName)
 
-        if docLink:
-            chooseDocument = dictionary.get("{}".format(linkName))
+        if refLinkInstance:
+            chooseRefLink = dictionary.get("{}".format(linkName))
         else:
-            chooseDocument = doc
+            chooseRefLink = null
 
         # print(chooseDocument)
 
@@ -299,14 +353,14 @@ try:
             # Collect all ducts in the active view
             collectorDucts = CollectDuctAuto()
             ductsEles = [doc.GetElement(s.Id) for s in collectorDucts]
-            intersectingWalls = GetIntersectingElements(chooseDocument, walls, ductsEles)
+            intersectingWalls = GetIntersectingElements(chooseRefLink, walls, ductsEles)
             print(intersectingWalls)
         elif manualMode:
             # Manual duct selection
             collectorDucts = CollectDuctManual()
             ductsEles = [doc.GetElement(s.ElementId) for s in collectorDucts]
             # Check intersections between walls and ducts
-            intersectingWalls = GetIntersectingElements(chooseDocument, walls, ductsEles)
+            intersectingWalls = GetIntersectingElements(chooseRefLink, walls, ductsEles)
             print(intersectingWalls)
 
 
