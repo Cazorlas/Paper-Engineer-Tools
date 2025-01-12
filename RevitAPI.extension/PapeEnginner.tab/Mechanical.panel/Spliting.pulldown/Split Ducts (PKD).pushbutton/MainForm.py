@@ -201,7 +201,7 @@ class MainForm(Form):
         self._labelWalls.Name = "labelWalls"
         self._labelWalls.Size = System.Drawing.Size(100, 23)
         self._labelWalls.TabIndex = 1
-        self._labelWalls.Text = "Walls"
+        self._labelWalls.Text = "Offset Walls"
         self._labelWalls.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
         #
         # labelStep
@@ -211,7 +211,7 @@ class MainForm(Form):
         self._textBoxStep.ScrollBars = System.Windows.Forms.ScrollBars.Horizontal
         self._labelStep.Size = System.Drawing.Size(100, 23)
         self._labelStep.TabIndex = 4
-        self._labelStep.Text = "Step"
+        self._labelStep.Text = "Step Duct Length"
         self._labelStep.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
         #
         # textBoxStep

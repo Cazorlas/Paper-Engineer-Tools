@@ -172,7 +172,7 @@ try:
     openForm = True
     while openForm:
         f = MainForm(nameModelLink)
-        f.ShowDialog()
+        f.Show()
 
         # User cancel
         if f.DialogResult != System.Windows.Forms.DialogResult.OK:

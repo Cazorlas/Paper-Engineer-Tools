@@ -69,21 +69,33 @@ class SelectionFilter(ISelectionFilter):
 
 
 def CollectDuctAuto():
-    return FilteredElementCollector(doc, view.Id).OfCategory(
-        BuiltInCategory.OST_DuctCurves).WhereElementIsNotElementType().ToElements()
+    ductsEles = FilteredElementCollector(doc, view.Id).OfClass(Duct).WhereElementIsNotElementType().ToElements()
+    return ductsEles
 
 
 def CollectDuctManual():
-    return uidoc.Selection.PickObjects(ObjectType.Element, SelectionFilter('Ducts'), 'Select Ducts')
+    collectorDucts = uidoc.Selection.PickObjects(ObjectType.Element, SelectionFilter('Ducts'), 'Select Ducts')
+    ductsEles = [doc.GetElement(s.ElementId) for s in collectorDucts]
+    return ductsEles
 
 
-def GetValidDuct(ducts, stepLength):
+def GetValidDucts(ducts, stepLength):
+    """
+    Filters and returns ducts that have a length greater than the specified step length.
+
+    :param ducts (list): A list of duct elements to be filtered.
+    :param stepLength (float): The minimum length threshold in feet.
+
+    :return list: A list of ducts with lengths greater than the specified step length.
+    """
     validDucts = []
 
     for duct in ducts:
-        family = duct.LookupParameter('Family').AsValueString()
-        duct_length_check = duct.LookupParameter('Length').AsDouble()  # ft
-        if duct_length_check > stepLength:
+        # Retrieve the 'Length' parameter of the duct (in feet)
+        ductLength = duct.LookupParameter('Length').AsDouble()  # ft
+
+        # Check if the duct length exceeds the specified threshold
+        if ductLength > stepLength:
             validDucts.append(duct)
 
     return validDucts
@@ -95,125 +107,130 @@ def CollectLinkData():
     """
     refLinkInstance = FilteredElementCollector(doc).OfClass(RevitLinkInstance).ToElements()
     linkType = [doc.GetElement(ref.GetTypeId()) for ref in refLinkInstance]
-    # docLink = [ref.GetLinkDocument() for ref in refLinkInstance]
+    linkedTransform = [linkedInstance.GetTransform() for linkedInstance in refLinkInstance]
+    docLink = [ref.GetLinkDocument() for ref in refLinkInstance]
 
-    nameLink = ["No Link"] + [link.LookupParameter("Type Name").AsString() for link in linkType] if linkType else [
-        "There is no Link Model"]
+    nameLink = [link.LookupParameter("Type Name").AsString() for link in linkType] if linkType else [
+        "No Link"]
 
-    return nameLink, refLinkInstance
+    statusLoad = ["Loaded" if i is not None else "Not Loaded" for i in docLink]
+
+    filteredLinkNames = ["No Link"] + [nameLink[i] for i, status in enumerate(statusLoad) if status == "Loaded"]
+    filteredLinkInstances = [refLinkInstance[i] for i, status in enumerate(statusLoad) if status == "Loaded"]
+
+    return filteredLinkNames, filteredLinkInstances, linkedTransform
 
 
-def GetWalls(refLinkInstance, linkName):
+def GetWalls(refLinkInstance):
     """
-    Collect all Wall Instances from the active view or a linked model.
-    :param refLinkInstance: List of LinkInstance elements in the model.
-    :param linkName: Selected name of the link from the ComboBox.
-    :return: List of Wall Instances.
+    Thu thập danh sách tường từ mô hình hiện tại hoặc liên kết.
+    :param refLinkInstance: Danh sách liên kết RevitLinkInstance hoặc None.
+    :return: Danh sách các tường (walls).
     """
-    # linkType = [doc.GetElement(ref.GetTypeId()) for ref in refLinkInstance]
+    walls = []
 
-    if linkName == "There is no Link Model" or linkName == "No Link":
-        # Collect walls from the active view in the current document
+    if refLinkInstance is None:
+        # Thu thập tường từ tài liệu hiện tại
         refwalls = FilteredElementCollector(doc, view.Id).OfCategory(
             BuiltInCategory.OST_Walls).WhereElementIsNotElementType().ToElements()
         walls = [doc.GetElement(wall.Id) for wall in refwalls]
+
     else:
-        # Check if the selected link exists in the document
 
-        for refLink in refLinkInstance:
-            linkType = doc.GetElement(refLink.GetTypeId())
-            linkTypeName = linkType.LookupParameter("Type Name").AsString()
+        # Kiểm tra tài liệu liên kết
+        linkedDoc = refLinkInstance.GetLinkDocument()
 
-            # if not linkedDoc:
-            #     raise Exception("Linked document '{}' is not loaded.".format(linkName))
-
-            if linkTypeName == linkName:
-                linkedDoc = refLink.GetLinkDocument()
-                # Thu thập tường từ view hiện tại trong tài liệu liên kết
-                walls = FilteredElementCollector(linkedDoc, view.Id).OfCategory(
-                    BuiltInCategory.OST_Walls).WhereElementIsNotElementType().ToElements()
-                # walls = [linkedDoc.GetElement(wall.LinkedElementId) for wall in refWalls]
-                break
+        # Thu thập tường từ tài liệu liên kết
+        refwalls = FilteredElementCollector(linkedDoc, view.Id).OfCategory(
+            BuiltInCategory.OST_Walls).WhereElementIsNotElementType().ToElements()
+        # walls = [linkedDoc.GetElement(wall.LinkedElementId) for wall in refwalls]
+        walls = refwalls
 
     return walls
 
 
-def GetSolidFromElement(element):
-    """
-    Lấy Solid từ một phần tử Revit.
-    :param element: Phần tử Revit.
-    :return: Solid của phần tử hoặc None nếu không có.
-    """
+def GetElementSolids(element):
+    solids = []
     options = Options()
-    geometry = element.get_Geometry(options)
-    if geometry is None:
-        return None
+    options.ComputeReferences = True
+    geometryElement = element.get_Geometry(options)
+    if geometryElement:
+        for geometryObject in geometryElement:
+            if isinstance(geometryObject, Solid) and geometryObject.Volume > 0:
+                solids.append(geometryObject)
+            elif isinstance(geometryObject, GeometryInstance):
+                for instanceGeometryObject in geometryObject.GetInstanceGeometry():
+                    if isinstance(instanceGeometryObject, Solid) and instanceGeometryObject.Volume > 0:
+                        solids.append(instanceGeometryObject)
+    return solids
 
-    for object in geometry:
-        if isinstance(object, Solid) and object.Volume > 0:
-            return object
 
-    return None
-
-
-def GetIntersectingElements(refLinkInstance, lstA, lstB):
+def GetMidPointOfLine(line):
     """
-    Kiểm tra giao cắt giữa hai danh sách phần tử.
-    :param refLinkInstance: Đối tượng liên kết RevitLinkInstance (nếu có).
-    :param lstA: Danh sách các tường (walls).
-    :param lstB: Danh sách các ống gió (ducts).
-    :return: Danh sách các phần tử từ lstA giao cắt với lstB.
+    Lấy điểm giữa (midpoint) của một đường thẳng (line).
+    :param line: Đối tượng đường thẳng (Line).
+    :return: Điểm giữa (XYZ).
     """
-    intersectingElements = []
+    start = line.GetEndPoint(0)
+    end = line.GetEndPoint(1)
+    return XYZ((start.X + end.X) / 2, (start.Y + end.Y) / 2, (start.Z + end.Z) / 2)
 
-    # Xác định tài liệu và transform (nếu là liên kết)
-    if refLinkInstance:
-        document = refLinkInstance.GetLinkDocument()
-        transform = refLinkInstance.GetTransform()
-    else:
-        document = doc
+
+def GetWallSolids(wall):
+    """
+    Lấy đối tượng hình học (solid) từ tường.
+    :param wall: Đối tượng tường.
+    :return: Danh sách các đối tượng Solid của tường.
+    """
+    solids = []
+    options = Options()
+    geometry = wall.get_Geometry(options)
+    for geo in geometry:
+        if isinstance(geo, Solid) and geo.Volume > 0:
+            solids.append(geo)
+    return solids
+
+
+def GetIntersectingElements(linkInstance, walls, ducts):
+    intersectingData = []
+
+    opt = Options()
+    opt.ComputeReferences = True
+    intersectOptions = SolidCurveIntersectionOptions()
+
+    if linkInstance is None:
         transform = Transform.Identity
+    else:
+        transform = linkInstance.GetTransform()
 
-    for eleA in lstA:
-        # Lấy Solid từ eleA
-        solidA = GetSolidFromElement(eleA)
-        if not solidA:
-            continue
+    for duct in ducts:
+        ductCurve = duct.Location.Curve
+        wallsForDuct = []  # Danh sách walls giao cắt với duct
+        midpointsForDuct = []  # Danh sách midpoints của duct
 
-        # Áp dụng transform nếu là liên kết
-        solid = SolidUtils.CreateTransformed(solidA, transform.Inverse) if refLinkInstance else solidA
+        for wall in walls:
+            wallSolids = wall.Geometry[opt]
 
-        # Tạo bộ lọc giao cắt Solid
-        solidFilter = ElementIntersectsSolidFilter(solid)
+            for wallSolid in wallSolids:
+                transformedWallSolid = SolidUtils.CreateTransformed(wallSolid, transform)
+                intersection = transformedWallSolid.IntersectWithCurve(ductCurve, intersectOptions)
+                if intersection.SegmentCount > 0:
+                    # Lấy điểm giữa của giao điểm
+                    line = intersection.GetCurveSegment(0)
+                    midpoint = GetMidPointOfLine(line)
 
-        # Thu thập các phần tử giao cắt với solidA
-        intersectingCollector = FilteredElementCollector(document).WhereElementIsNotElementType().WherePasses(
-            solidFilter).ToElements()
+                    # Thêm wall và midpoint vào danh sách
+                    wallsForDuct.append(wall)
+                    midpointsForDuct.append(midpoint)
 
-        # Kiểm tra nếu các phần tử trong lstB nằm trong danh sách giao cắt
-        for eleB in intersectingCollector:
-            if eleB.Id in [b.Id for b in lstB]:
-                intersectingElements.append(eleA)
-                break  # Dừng kiểm tra nếu tìm thấy phần tử giao cắt
+        # Thêm thông tin duct vào kết quả
+        intersectingData.append({
+            "Duct": duct,
+            "Walls": wallsForDuct,
+            "Midpoints": midpointsForDuct
+        })
 
-    return intersectingElements
-
-
-    # for eleA in lstA:
-    #     transform = eleA.GetTransform()
-    #
-    #     filter = ElementIntersectsElementFilter(eleA)
-    #     intersectingCollector = FilteredElementCollector(document, view.Id).WhereElementIsNotElementType().WherePasses(
-    #         filter).ToElements()
-    #
-    #     # Kiểm tra phần tử trong lstB
-    #     for ele in intersectingCollector:
-    #         if ele.Id in [b.Id for b in lstB]:
-    #             intersectingElements.append(eleA)
-    #             break  # Dừng kiểm tra nếu đã tìm thấy giao cắt
-    #
-    # # print(intersectingCollector)
-    # return intersectingElements
+    return intersectingData
 
 
 def ClosestConnectors(el1, el2):
@@ -287,41 +304,61 @@ def GetUnionThickness(unionFamily):
     # distanceConnector = round(connectorPoint1.DistanceTo(connectorPoint2) * 304.8)
     return distanceConnector
 
+def SplitDuct(doc, duct, desiredLength, ductThickness):
+    """
+    Splits a duct into multiple segments based on the desired length.
+
+    Parameters:
+        doc (Document): The Revit document.
+        duct (Element): The duct to be split.
+        desiredLength (float): The desired length for each duct segment (in feet).
+        ductThickness (float): The union thickness to account for when splitting (in feet).
+
+    Returns:
+        list: A list of Element IDs for the newly created duct segments, including the original duct ID.
+    """
+    # Lấy độ dài và đường cong của ống
+    ductLength = duct.LookupParameter('Length').AsDouble()  # ft
+    ductCurve = duct.Location.Curve
+    startPoint = ductCurve.GetEndPoint(0)
+
+    # Xác định số đoạn cần tạo
+    segmentsToCreate = int(ductLength / (desiredLength + ductThickness))
+
+    # Danh sách để lưu các đoạn ống mới
+    newElemIds = []
+
+    # Bắt đầu transaction để cắt ống
+    t = Transaction(doc, "Split Duct")
+    t.Start()
+    scale = 0
+    for i in range(segmentsToCreate):
+        # Tính điểm cắt
+        if i == 0:
+            scale += desiredLength + (ductThickness / 2)
+        else:
+            scale += desiredLength + ductThickness
+
+        cutPoint = startPoint + (ductCurve.Direction * scale)
+
+        # Cắt ống tại điểm cắt
+        newElemId = MechanicalUtils.BreakCurve(doc, duct.Id, cutPoint)
+        newElemIds.append(newElemId)
+
+    # Thêm ID của ống gốc vào danh sách
+    newElemIds.append(duct.Id)
+
+    t.Commit()
+
+    return newElemIds
+
 
 """----------------------MAIN CODE----------------------------"""
 try:
-    # refDucts = CollectDuctManual()
-    # ductEles = [doc.GetElement(duct.ElementId) for duct in refDucts]
+    nameLink, refLinkInstance, linkedTransform = CollectLinkData()
+    nameLinkRemoveFirst = nameLink[1:]
+    dictionary = dict(zip(nameLinkRemoveFirst, refLinkInstance))
 
-    # abc = {'Option 1': 10.0, 'Option 2': 20.0}
-    #
-    # # Khởi tạo các thành phần của Form
-    # components = [Label('Pick Style:'),
-    #               Separator(),  # Dấu phân cách làm tiêu đề
-    #               # ComboBox('combobox1', abc),  # Hộp chọn với các tùy chọn
-    #               Separator(),  # Dấu phân cách
-    #               ComboBox('textbox1', abc),  # Hộp chọn thay thế TextBox
-    #               CheckBox('checkbox1', 'Check this'),  # Ô chọn (Checkbox)
-    #               Separator(),  # Dấu ngăn cách
-    #               Button('Select')  # Nút bấm
-    #               ]
-    #
-    # # Tạo và hiển thị FlexForm
-    # form = FlexForm('My Custom Form', components)
-    # result = form.show()
-    #
-    # # Xử lý kết quả từ Form
-    # if result:
-    #     selected_option = result.get('combobox1')
-    #     entered_text = result.get('textbox1')
-    #     checkbox_state = result.get('checkbox1')
-    # else:
-    #     pass
-
-    nameLink, refLinkInstance = CollectLinkData()
-    # print(transform)
-
-    dictionary = dict(zip(nameLink, refLinkInstance))
     """----------------------------RUN FORMS----------------------------"""
 
     f = MainForm(nameLink)
@@ -333,35 +370,69 @@ try:
         autoMode = f._radioButtonAuto.Checked
         manualMode = f._radioButtonManual.Checked
         stepLength = float(f._textBoxStep.Text)  # mm
+        cutLength = stepLength / 304.8  # ft
         stepWall = float(f._textBoxWall.Text)
         linkName = f._comboBoxLink.Text
 
-        # Gọi hàm GetWalls để lấy danh sách tường
-        walls = GetWalls(refLinkInstance, linkName)
+        if linkName == "No Link":
+            chooseRefLink = None
 
-        if refLinkInstance:
-            chooseRefLink = dictionary.get("{}".format(linkName))
         else:
-            chooseRefLink = null
+            chooseRefLink = dictionary.get(linkName)
 
-        # print(chooseDocument)
+        # Gọi hàm GetWalls để lấy danh sách tường
+        walls = GetWalls(chooseRefLink)
 
         # print(walls)
 
         # Check if Auto Mode or Manual Mode is selected
         if autoMode:
             # Collect all ducts in the active view
-            collectorDucts = CollectDuctAuto()
-            ductsEles = [doc.GetElement(s.Id) for s in collectorDucts]
-            intersectingWalls = GetIntersectingElements(chooseRefLink, walls, ductsEles)
-            print(intersectingWalls)
+            ducts = CollectDuctAuto()
+
         elif manualMode:
             # Manual duct selection
-            collectorDucts = CollectDuctManual()
-            ductsEles = [doc.GetElement(s.ElementId) for s in collectorDucts]
-            # Check intersections between walls and ducts
-            intersectingWalls = GetIntersectingElements(chooseRefLink, walls, ductsEles)
-            print(intersectingWalls)
+            ducts = CollectDuctManual()
+
+        if len(ducts) == 0:
+            TaskDialog.Show("Error", "There is no Selected Ducts")
+            break
+
+        # Check intersections between walls and ducts
+        intersectingData = GetIntersectingElements(chooseRefLink, walls, ducts)
+
+        intersectingDucts = []
+        intersectingWalls = []
+        intersectingPoints = []
+
+        notIntersectingDucts = []
+
+
+
+        # Hiển thị kết quả
+        for data in intersectingData:
+            duct = data["Duct"]
+            walls = data["Walls"]
+            midpoints = data["Midpoints"]
+
+            if walls:
+                # print("Duct: {}".format(duct.Id))
+                # print("Intersecting Walls: {}".format([wall.Id for wall in walls]))
+                # print("Midpoints: {}".format(midpoints))
+                intersectingDucts.append(duct)
+                intersectingWalls.append(walls)
+                intersectingPoints.append(midpoints)
+            else:
+                notIntersectingDucts.append(duct)
+                # print("Duct: {}".format(duct.Id))
+                # print("Intersecting Walls: []")
+                # print("Midpoints: []")
+
+        # Process notIntersectingDucts First
+        ductsValid = GetValidDucts(notIntersectingDucts,cutLength)
+
+
+
 
 
 
