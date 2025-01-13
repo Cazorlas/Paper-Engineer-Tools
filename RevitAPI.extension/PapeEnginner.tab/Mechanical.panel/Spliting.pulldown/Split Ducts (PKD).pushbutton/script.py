@@ -61,12 +61,16 @@ version = int(app.VersionNumber)
 class SelectionFilter(ISelectionFilter):
     """Filter to select only elements of a specific category."""
 
-    def __init__(self, category_name):
-        self.category_name = category_name
+    def __init__(self, categoryName, shapeType):
+        self.category_name = categoryName
+        self.shape_type = shapeType
 
     def AllowElement(self, e):
         if e.Category and e.Category.Name == self.category_name:
-            return True
+            if isinstance(e, Duct):
+                duct_type = e.DuctType
+                if duct_type and duct_type.Shape == self.shape_type:
+                    return True
         return False
 
     def AllowReference(self, ref, point):
@@ -79,19 +83,15 @@ def CollectDuctAuto():
 
 
 def CollectDuctManual():
-    collectorDucts = uidoc.Selection.PickObjects(ObjectType.Element, SelectionFilter('Ducts'), 'Select Ducts')
+    collectorDucts = uidoc.Selection.PickObjects(ObjectType.Element,
+                                                 SelectionFilter('Ducts', ConnectorProfileType.Rectangular),
+                                                 'Select Ducts')
     ductsEles = [doc.GetElement(s.ElementId) for s in collectorDucts]
     return ductsEles
 
 
-
-
-
 def flattenLv3(lst):
     return [i for sub_lst in lst for i in sub_lst]
-
-
-
 
 
 def GetValidDucts(ducts, stepLength):
@@ -168,10 +168,8 @@ def GetDuctTypeShape(shapeType, lstDucts):
     result = []
 
     for duct in lstDucts:
-        ductType = duct.DuctType
-        shape = ductType.Shape
-
-        if shape == shapeType:
+        ductShape = duct.DuctType.Shape
+        if ductShape == shapeType:
             result.append(duct)
 
     return result
@@ -219,8 +217,26 @@ def GetWallSolids(wall):
     return solids
 
 
-def GetVerticalDucts():
-    pass
+def GetVerticalDucts(lstDucts):
+    verticalDucts = []
+    otherDucts = []
+
+    for duct in lstDucts:
+        ductCurve = duct.Location.Curve
+        lineDirection = ductCurve.Direction
+        vectorNormalized = lineDirection.Normalize()
+        zAxis = XYZ(0, 0, 1)
+
+        # Tính dot product giữa vector ống và trục Z
+        dotProduct = vectorNormalized.DotProduct(zAxis)
+
+        # Nếu dot product gần bằng 1 hoặc -1, đây là ống đứng
+        if abs(dotProduct - 1) < 1e-6 or abs(dotProduct + 1) < 1e-6:
+            verticalDucts.append(duct)
+        else:
+            otherDucts.append(duct)
+
+    return verticalDucts, otherDucts
 
 
 def GetIntersectingElements(linkInstance, walls, ducts):
@@ -506,6 +522,7 @@ def CurveAtSegmentLength(eles, distance, unionThickness):
         # Divide length into pieces
         length = ele.LookupParameter('Length').AsDouble()  # ft
         section = int(length / (distance + (1 / 304.8)))
+        lastSectionLength = length - (section * (distance / 304.8) + thickness)
         lstSub = []
         scale = float(0)
 
@@ -515,9 +532,24 @@ def CurveAtSegmentLength(eles, distance, unionThickness):
             elif i > 0:
                 scale += float(distance) + float(thickness)
 
+
             vectorDist = direct.Multiply(scale)
             newpoint = point.Add(vectorDist)
             lstSub.append(newpoint)
+
+        # Handle the last section if it's smaller than 150mm (0.492 ft)
+        if lastSectionLength > 0:
+            if lastSectionLength <= (150 / 304.8):  # 150mm in ft
+                # Add the remaining length to the last segment
+                if lstSub:
+                    lstSub[-1] = lstSub[-1].Add(direct.Multiply(lastSectionLength))
+            else:
+                # Create a new segment for the remaining length
+                scale += lastSectionLength
+                vectorDist = direct.Multiply(scale)
+                newpoint = point.Add(vectorDist)
+                lstSub.append(newpoint)
+
         result.append(lstSub)
 
     return result
@@ -539,6 +571,10 @@ try:
         # Get the desired length from the form input
         autoMode = f._radioButtonAuto.Checked
         manualMode = f._radioButtonManual.Checked
+        planOption = f._radioButtonPlan.Checked
+        verticalOption = f._radioButtonVertical.Checked
+        allOption = f._radioButtonAll.Checked
+
         stepLength = float(f._textBoxStep.Text)  # mm
         cutLength = stepLength / 304.8  # ft
         offSetWall = float(f._textBoxWall.Text) / 304.8  # ft
@@ -558,87 +594,97 @@ try:
         if autoMode:
             # Collect all ducts in the active view
             ductsCollector = CollectDuctAuto()
-            ducts= GetDuctTypeShape("Rectangular",ducts)
+            ductsEles = GetDuctTypeShape(ConnectorProfileType.Rectangular, ductsCollector)
+            verticalDucts, otherDucts = GetVerticalDucts(ductsEles)
+
+            if planOption:
+                ducts = otherDucts
+            elif verticalOption:
+                ducts = verticalDucts
+            elif allOption:
+                ducts = ductsEles
+            else:
+                ducts = ductsEles
+
 
         elif manualMode:
             # Manual duct selection
             ducts = CollectDuctManual()
 
-
         if len(ducts) == 0:
             TaskDialog.Show("Error", "There is no Selected Ducts")
-            exit()
 
         # Check intersections between walls and ducts
         intersectingData = GetIntersectingElements(chooseRefLink, walls, ducts)
         intersectingDucts, intersectingWalls, intersectingPoints, intersectingLines, notIntersectingDucts = ProcessData(
             intersectingData)
 
-        # with TransactionGroup(doc, "Split Ducts") as tg:
-        #     tg.Start()
-        #     # Process Ducts through the Walls first
-        #     if len(intersectingDucts) > 0 and offSetWall > 0:
-        #         intersectingDuctsValid = GetValidDucts(intersectingDucts, cutLength)
-        #         ductEles = [doc.GetElement(duct.Id) for duct in intersectingDuctsValid]
-        #         intersectingDuctUnion = [GetDuctUnionFamily(duct) for duct in ductEles]
-        #         intersectingUnionThickness = [GetUnionThickness(union) for union in intersectingDuctUnion]
-        #         offSet = offSetWall + (intersectingUnionThickness[0] / 2)
-        #
-        #         # Process the Points
-        #         lstVector = [l.Direction for lines in intersectingLines for l in lines]
-        #         firstLine = [line[0] for line in intersectingLines]
-        #
-        #         # Align lstVector with intersectingPoints
-        #         alignedVectors = AlignData(intersectingPoints, lstVector)
-        #
-        #         offsetPoints = GetOffSetPoints(offSet, alignedVectors, intersectingPoints)
-        #         groupedOffsetPoints = GroupOffsetPoints(offsetPoints, intersectingPoints)
-        #         sortPoints = SortPointByLineDirectionNested(firstLine, groupedOffsetPoints)
-        #
-        #         # THIS
-        #         lst1Ducts = []
-        #         lst2Ducts = []
-        #         lstAllDucts = []
-        #
-        #         for duct, subPoint in zip(intersectingDuctsValid, sortPoints):
-        #             lst1Ducts = SplitDuctByPoints(duct, subPoint)
-        #             lstAllDucts.append(lst1Ducts)
-        #             lst2Ducts = lst1Ducts[1:]
-        #
-        #             for ele1, ele2 in zip(lst1Ducts, lst2Ducts):
-        #                 CreateFittings(ele1, ele2)
-        #
-        #         lstDucts = notIntersectingDucts + flattenLv3(lstAllDucts)
-        #
-        #
-        #     else:
-        #         lstDucts = notIntersectingDucts
-        #
-        #
-        #     ductsValid = GetValidDucts(lstDucts, cutLength)
-        #     ductEles = [doc.GetElement(duct.Id) for duct in ductsValid]
-        #     ductUnion = [GetDuctUnionFamily(duct) for duct in ductEles]
-        #     unionThickness = [GetUnionThickness(union) for union in ductUnion]
-        #
-        #     # Create a list of distances
-        #     pts = CurveAtSegmentLength(ductEles, cutLength, unionThickness)
-        #
-        #     # Process notIntersectingDucts First
-        #     for points in pts:
-        #         for subPoint in points:
-        #             toPoint = VisualizeGeometry.VisualizePoint(doc, subPoint)
-        #
-        #     lst1Ducts = []
-        #     lst2Ducts = []
-        #
-        #     for duct, subPoint in zip(ductsValid, pts):
-        #         lst1Ducts = SplitDuctByPoints(duct, subPoint)
-        #         lst2Ducts = lst1Ducts[1:]
-        #
-        #         for ele1, ele2 in zip(lst1Ducts, lst2Ducts):
-        #             CreateFittings(ele1, ele2)
-        #
-        #     tg.Assimilate()
+        with TransactionGroup(doc, "Split Ducts") as tg:
+            tg.Start()
+            # Process Ducts through the Walls first
+            if len(intersectingDucts) > 0 and offSetWall > 0:
+                intersectingDuctsValid = GetValidDucts(intersectingDucts, cutLength)
+                ductEles = [doc.GetElement(duct.Id) for duct in intersectingDuctsValid]
+                intersectingDuctUnion = [GetDuctUnionFamily(duct) for duct in ductEles]
+                intersectingUnionThickness = [GetUnionThickness(union) for union in intersectingDuctUnion]
+                offSet = offSetWall + (intersectingUnionThickness[0] / 2)
+
+                # Process the Points
+                lstVector = [l.Direction for lines in intersectingLines for l in lines]
+                firstLine = [line[0] for line in intersectingLines]
+
+                # Align lstVector with intersectingPoints
+                alignedVectors = AlignData(intersectingPoints, lstVector)
+
+                offsetPoints = GetOffSetPoints(offSet, alignedVectors, intersectingPoints)
+                groupedOffsetPoints = GroupOffsetPoints(offsetPoints, intersectingPoints)
+                sortPoints = SortPointByLineDirectionNested(firstLine, groupedOffsetPoints)
+
+                # print(sortPoints)
+
+                # THIS
+                lst1Ducts = []
+                lst2Ducts = []
+                lstAllDucts = []
+
+                for duct, subPoint in zip(intersectingDuctsValid, sortPoints):
+                    lst1Ducts = SplitDuctByPoints(duct, subPoint)
+                    lstAllDucts.append(lst1Ducts)
+                    lst2Ducts = lst1Ducts[1:]
+
+                    for ele1, ele2 in zip(lst1Ducts, lst2Ducts):
+                        CreateFittings(ele1, ele2)
+
+                lstDucts = notIntersectingDucts + flattenLv3(lstAllDucts)
+
+
+            else:
+                lstDucts = notIntersectingDucts
+
+            ductsValid = GetValidDucts(lstDucts, cutLength)
+            ductEles = [doc.GetElement(duct.Id) for duct in ductsValid]
+            ductUnion = [GetDuctUnionFamily(duct) for duct in ductEles]
+            unionThickness = [GetUnionThickness(union) for union in ductUnion]
+
+            # Create a list of distances
+            pts = CurveAtSegmentLength(ductEles, cutLength, unionThickness)
+
+            # Process notIntersectingDucts First
+            for points in pts:
+                for subPoint in points:
+                    toPoint = VisualizeGeometry.VisualizePoint(doc, subPoint)
+
+            lst1Ducts = []
+            lst2Ducts = []
+
+            for duct, subPoint in zip(ductsValid, pts):
+                lst1Ducts = SplitDuctByPoints(duct, subPoint)
+                lst2Ducts = lst1Ducts[1:]
+
+                for ele1, ele2 in zip(lst1Ducts, lst2Ducts):
+                    CreateFittings(ele1, ele2)
+
+            tg.Assimilate()
 
 
 

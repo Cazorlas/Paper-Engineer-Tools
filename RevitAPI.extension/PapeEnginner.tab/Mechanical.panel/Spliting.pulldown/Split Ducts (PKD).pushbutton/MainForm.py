@@ -290,8 +290,8 @@ class MainForm(Form):
         self._tooltip.SetToolTip(self._textBoxStep, "Enter the step length in milimeters.\nThe Step length has to be larger than offset Wall Length and 0")
         self._tooltip.SetToolTip(self._radioButtonAuto, "Select all ducts in view as per Select Mode")
         self._tooltip.SetToolTip(self._radioButtonManual, "Select ducts by picking")
-        self._tooltip.SetToolTip(self._radioButtonPlan, "Select all ducts in view but vertical ducts")
-        self._tooltip.SetToolTip(self._radioButtonVertical, "Select all ducts in view but horizontal ducts")
+        self._tooltip.SetToolTip(self._radioButtonPlan, "Select all plans ducts in view")
+        self._tooltip.SetToolTip(self._radioButtonVertical, "Select all vertical ducts in view")
         self._tooltip.SetToolTip(self._radioButtonAll, "Select all ducts in view")
         self._tooltip.SetToolTip(self._comboBoxLink, "Select Link")
 
