@@ -12,6 +12,11 @@ from System.Collections.Generic import *
 clr.AddReference('RevitAPI')
 clr.AddReference('RevitAPIUI')
 
+from ElementGeometry import *
+from ModelSelection import *
+from VisualizeGeometry import *
+from RevitUtils import *
+
 import Autodesk
 from Autodesk.Revit.UI import *
 from Autodesk.Revit.UI.Selection import *
@@ -77,6 +82,18 @@ def CollectDuctManual():
     collectorDucts = uidoc.Selection.PickObjects(ObjectType.Element, SelectionFilter('Ducts'), 'Select Ducts')
     ductsEles = [doc.GetElement(s.ElementId) for s in collectorDucts]
     return ductsEles
+
+
+def flattenLv4(lst):
+    return [z for sub_lst in lst for nest_lst in sub_lst for z in nest_lst]
+
+
+def flattenLv3(lst):
+    return [i for sub_lst in lst for i in sub_lst]
+
+
+def flattenLv2(lst):
+    return [i for i in lst]
 
 
 def GetValidDucts(ducts, stepLength):
@@ -207,6 +224,7 @@ def GetIntersectingElements(linkInstance, walls, ducts):
         ductCurve = duct.Location.Curve
         wallsForDuct = []  # Danh sách walls giao cắt với duct
         midpointsForDuct = []  # Danh sách midpoints của duct
+        linesForDuct = []
 
         for wall in walls:
             wallSolids = wall.Geometry[opt]
@@ -222,12 +240,14 @@ def GetIntersectingElements(linkInstance, walls, ducts):
                     # Thêm wall và midpoint vào danh sách
                     wallsForDuct.append(wall)
                     midpointsForDuct.append(midpoint)
+                    linesForDuct.append(line)
 
         # Thêm thông tin duct vào kết quả
         intersectingData.append({
             "Duct": duct,
             "Walls": wallsForDuct,
-            "Midpoints": midpointsForDuct
+            "Midpoints": midpointsForDuct,
+            "Lines": linesForDuct
         })
 
     return intersectingData
@@ -304,6 +324,7 @@ def GetUnionThickness(unionFamily):
     # distanceConnector = round(connectorPoint1.DistanceTo(connectorPoint2) * 304.8)
     return distanceConnector
 
+
 def SplitDuct(doc, duct, desiredLength, ductThickness):
     """
     Splits a duct into multiple segments based on the desired length.
@@ -353,6 +374,104 @@ def SplitDuct(doc, duct, desiredLength, ductThickness):
     return newElemIds
 
 
+def GetOffSetPoints(offsets, vectors, points):
+    """
+    Computes offset points based on the given points and their respective direction vectors.
+
+    :param offsets: The offset distance.
+    :param vectors: A list of lists of direction vectors (XYZ).
+    :param points: A list of lists of origin points (XYZ).
+    :return: A nested list of offset points with positive and negative offsets.
+    """
+    # Validate input lengths
+    if len(points) != len(vectors):
+        raise ValueError("The number of sublists in points and vectors does not match!")
+
+    result = []  # List to store the offset points
+
+    for i, sublistPoints in enumerate(points):
+        directionSublist = vectors[i]  # Get the corresponding sublist of vectors
+        tempResult = []  # Temporary list for storing offset results
+
+        if len(sublistPoints) != len(directionSublist):
+            raise ValueError("The number of points and vectors in each sublist does not match!")
+
+        for j, point in enumerate(sublistPoints):
+            direction = directionSublist[j].Normalize()  # Normalize the vector
+            # Compute positive and negative offset points
+            positiveOffset = point + (direction * offsets)  # Positive offset
+            negativeOffset = point - (direction * offsets)  # Negative offset
+            tempResult.append([positiveOffset, negativeOffset])  # Add the pair to the sublist
+
+        result.append(tempResult)  # Add the sublist to the result
+
+    return result
+
+def ProcessList(lstpoints):
+    """
+    Chuyển đổi groupedOffsetPoints thành danh sách như mong muốn.
+
+    :param lstpoints: Danh sách lồng nhau của groupedOffsetPoints.
+    :return: Danh sách được tái cấu trúc.
+    """
+    restructured = []
+    for sublist in lstpoints:
+        # Làm phẳng từng sublist ở cấp độ 2
+        flattenedSublist = [point for pair in sublist for point in pair]
+        restructured.append(flattenedSublist)
+    return restructured
+
+def GroupOffsetPoints(offsetPoints, intersectingPoints):
+    """
+    Groups offset points by ducts, where each duct has subgroups of offset points for each intersection.
+
+    :param offsetPoints: Nested list of offset points (organized by ducts and intersections).
+    :param intersectingPoints: Original nested list of intersecting points (organized by ducts).
+    :return: List of grouped offset points by duct, with each duct containing subgroups of offset points.
+    """
+    groupedPoints = []  # List to store grouped offset points by duct
+
+    # Check that offsetPoints and intersectingPoints have the same outer structure
+    if len(offsetPoints) != len(intersectingPoints):
+        raise ValueError("Mismatch between offsetPoints and intersectingPoints structure!")
+
+    # Loop through each duct in intersectingPoints
+    for ductOffsets, ductIntersections in zip(offsetPoints, intersectingPoints):
+        if len(ductOffsets) != len(ductIntersections):
+            raise ValueError("Mismatch between offset points and intersecting points for a duct!")
+
+        ductGroup = []  # List to store offset points for the current duct
+        for offsets in ductOffsets:
+            # Each offsets corresponds to a pair of points [positiveOffset, negativeOffset]
+            ductGroup.append(offsets)
+        groupedPoints.append(ductGroup)
+
+    return ProcessList(groupedPoints)
+
+
+def SortPointByLineDirectionNested(lines, lstPoints):
+    """
+    Xử lý danh sách cấp 2 của line và point.
+    lines: Danh sách các đường thẳng (nested list).
+    lstPoints: Danh sách các danh sách điểm (nested list).
+
+    Trả về:
+    sortedPointsList: Danh sách các điểm đã được sắp xếp theo hướng của đường thẳng tương ứng.
+    """
+    sortedPointsList = []
+    for line, points in zip(lines, lstPoints):
+        # Đảm bảo cả line và points không rỗng
+        if line and points:
+            direction = line.Direction.Normalize()  # Lấy vector chỉ phương của line
+            sortedPoints = sorted(points, key=lambda point: direction.DotProduct(point))  # Sắp xếp theo DotProduct
+            sortedPointsList.append(sortedPoints)
+        else:
+            # Nếu line hoặc points rỗng, thêm giá trị rỗng vào danh sách kết quả
+            sortedPointsList.append([])
+    return sortedPointsList
+
+
+
 """----------------------MAIN CODE----------------------------"""
 try:
     nameLink, refLinkInstance, linkedTransform = CollectLinkData()
@@ -396,7 +515,7 @@ try:
 
         if len(ducts) == 0:
             TaskDialog.Show("Error", "There is no Selected Ducts")
-            break
+            exit()
 
         # Check intersections between walls and ducts
         intersectingData = GetIntersectingElements(chooseRefLink, walls, ducts)
@@ -404,16 +523,16 @@ try:
         intersectingDucts = []
         intersectingWalls = []
         intersectingPoints = []
+        intersectingLines = []
 
         notIntersectingDucts = []
-
-
 
         # Hiển thị kết quả
         for data in intersectingData:
             duct = data["Duct"]
             walls = data["Walls"]
             midpoints = data["Midpoints"]
+            lines = data["Lines"]
 
             if walls:
                 # print("Duct: {}".format(duct.Id))
@@ -422,13 +541,57 @@ try:
                 intersectingDucts.append(duct)
                 intersectingWalls.append(walls)
                 intersectingPoints.append(midpoints)
+                intersectingLines.append(lines)
             else:
                 notIntersectingDucts.append(duct)
                 # print("Duct: {}".format(duct.Id))
                 # print("Intersecting Walls: []")
                 # print("Midpoints: []")
 
+        # print(intersectingPoints)
+
+        lstVector = [l.Direction for lines in intersectingLines for l in lines]
+        firstLine = [line[0] for line in intersectingLines]
+        # print(intersectingDucts)
+        # print(50*"-")
+        # print(intersectingLines)
+        # print(50*"-")
+        # print(lstVector)
+        # print(50*"-")
+        # print(intersectingPoints)
+
+        # Align lstVector with intersectingPoints
+        alignedVectors = []
+        vectorIndex = 0
+        for pointSublist in intersectingPoints:
+            sublistVectors = []
+            for _ in pointSublist:
+                sublistVectors.append(lstVector[vectorIndex])
+                vectorIndex += 1
+            alignedVectors.append(sublistVectors)
+
+        # print(alignedVectors)
+
+        offSet = 500 / 304.8
+        offsetPoints = GetOffSetPoints(offSet, alignedVectors, intersectingPoints)
+        # print(offsetPoints)
+        # print(50 * "-")
+        # print(intersectingPoints)
+        # print(50 * "-")
+        groupedOffsetPoints = GroupOffsetPoints(offsetPoints, intersectingPoints)
+        # print(groupedOffsetPoints)
+        # print(50 * "-")
+        sortPoints = SortPointByLineDirectionNested(firstLine, groupedOffsetPoints)
+        # print(sortPoints)
+        # print(50 * "-")
+        # print(firstLine)
+
+
         # Process notIntersectingDucts First
+        for points in sortPoints:
+            for subPoint in points:
+                toPoint = VisualizeGeometry.VisualizePoint(doc, subPoint)
+
         ductsValid = GetValidDucts(notIntersectingDucts,cutLength)
 
 
