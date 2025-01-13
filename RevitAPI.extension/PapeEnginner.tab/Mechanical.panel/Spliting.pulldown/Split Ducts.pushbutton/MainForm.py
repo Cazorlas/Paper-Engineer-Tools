@@ -213,11 +213,11 @@ class MainForm(Form):
 
     # Event handler for OK button click
     def OKbuttonClick(self, sender, e):
-        length_input = self._LengthInput.Text.strip()  # Trim whitespace
+        lengthInput = self._LengthInput.Text.strip()  # Trim whitespace
 
         try:
-            length_value = float(length_input)  # Try converting to float
-            if length_value <= 0:
+            lengthValue = float(lengthInput)  # Try converting to float
+            if lengthValue <= 0:
                 MessageBox.Show('Please enter a length greater than 0.', 'Warning')
             else:
                 # Process the input as necessary (e.g., pass length to a duct splitting function)

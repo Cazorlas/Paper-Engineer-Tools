@@ -300,7 +300,7 @@ def CreateFittings(ele1, ele2):
     return fittings
 
 
-def GetDuctunionFamily(duct):
+def GetDuctUnionFamily(duct):
     """Get the Family Union in Routing Preferences of Duct"""
     routing_manager = duct.DuctType.RoutingPreferenceManager
     ruleUnion = routing_manager.GetRule(RoutingPreferenceRuleGroupType.Unions, 0)
@@ -315,63 +315,14 @@ def GetConnectorsFromDocument(doc):
 
 
 def GetUnionThickness(unionFamily):
-    """Get Connectors of Union Family (mm)"""
+    """Get Connectors of Union Family (ft)"""
     UnionfamilyDoc = doc.EditFamily(unionFamily)
     familyConnector = GetConnectorsFromDocument(UnionfamilyDoc)
     connectorPoint1 = familyConnector[0].Origin
     connectorPoint2 = familyConnector[1].Origin
-    distanceConnector = connectorPoint1.DistanceTo(connectorPoint2) * 304.8
+    distanceConnector = connectorPoint1.DistanceTo(connectorPoint2)
     # distanceConnector = round(connectorPoint1.DistanceTo(connectorPoint2) * 304.8)
     return distanceConnector
-
-
-def SplitDuct(doc, duct, desiredLength, ductThickness):
-    """
-    Splits a duct into multiple segments based on the desired length.
-
-    Parameters:
-        doc (Document): The Revit document.
-        duct (Element): The duct to be split.
-        desiredLength (float): The desired length for each duct segment (in feet).
-        ductThickness (float): The union thickness to account for when splitting (in feet).
-
-    Returns:
-        list: A list of Element IDs for the newly created duct segments, including the original duct ID.
-    """
-    # Lấy độ dài và đường cong của ống
-    ductLength = duct.LookupParameter('Length').AsDouble()  # ft
-    ductCurve = duct.Location.Curve
-    startPoint = ductCurve.GetEndPoint(0)
-
-    # Xác định số đoạn cần tạo
-    segmentsToCreate = int(ductLength / (desiredLength + ductThickness))
-
-    # Danh sách để lưu các đoạn ống mới
-    newElemIds = []
-
-    # Bắt đầu transaction để cắt ống
-    t = Transaction(doc, "Split Duct")
-    t.Start()
-    scale = 0
-    for i in range(segmentsToCreate):
-        # Tính điểm cắt
-        if i == 0:
-            scale += desiredLength + (ductThickness / 2)
-        else:
-            scale += desiredLength + ductThickness
-
-        cutPoint = startPoint + (ductCurve.Direction * scale)
-
-        # Cắt ống tại điểm cắt
-        newElemId = MechanicalUtils.BreakCurve(doc, duct.Id, cutPoint)
-        newElemIds.append(newElemId)
-
-    # Thêm ID của ống gốc vào danh sách
-    newElemIds.append(duct.Id)
-
-    t.Commit()
-
-    return newElemIds
 
 
 def GetOffSetPoints(offsets, vectors, points):
@@ -407,6 +358,7 @@ def GetOffSetPoints(offsets, vectors, points):
 
     return result
 
+
 def ProcessList(lstpoints):
     """
     Chuyển đổi groupedOffsetPoints thành danh sách như mong muốn.
@@ -420,6 +372,7 @@ def ProcessList(lstpoints):
         flattenedSublist = [point for pair in sublist for point in pair]
         restructured.append(flattenedSublist)
     return restructured
+
 
 def GroupOffsetPoints(offsetPoints, intersectingPoints):
     """
@@ -471,6 +424,89 @@ def SortPointByLineDirectionNested(lines, lstPoints):
     return sortedPointsList
 
 
+def ProcessData(Data):
+    # Process Data
+    intersectingDucts = []
+    intersectingWalls = []
+    intersectingPoints = []
+    intersectingLines = []
+
+    notIntersectingDucts = []
+
+    # Hiển thị kết quả
+    for data in Data:
+        duct = data["Duct"]
+        walls = data["Walls"]
+        midpoints = data["Midpoints"]
+        lines = data["Lines"]
+
+        if walls:
+            intersectingDucts.append(duct)
+            intersectingWalls.append(walls)
+            intersectingPoints.append(midpoints)
+            intersectingLines.append(lines)
+        else:
+            notIntersectingDucts.append(duct)
+
+    return intersectingDucts, intersectingWalls, intersectingPoints, intersectingLines, notIntersectingDucts
+
+
+def AlignData(intersectingPoints, lstVector):
+    # Align lstVector with intersectingPoints
+    alignedVectors = []
+    vectorIndex = 0
+    for pointSublist in intersectingPoints:
+        sublistVectors = []
+        for _ in pointSublist:
+            sublistVectors.append(lstVector[vectorIndex])
+            vectorIndex += 1
+        alignedVectors.append(sublistVectors)
+
+    return alignedVectors
+
+
+def SplitDuctByPoints(duct, pts):
+    ele = []
+    result = []
+    with Transaction(doc, 'Break Curve') as t:
+        t.Start()
+        for pt in pts:
+            try:
+                ele.append(DB.Mechanical.MechanicalUtils.BreakCurve(doc, duct.Id, pt))
+            except Exception as er:
+                result.append(er)
+        ele.append(duct.Id)
+        result = [doc.GetElement(Id) for Id in ele]
+        t.Commit()
+    return result
+
+
+def CurveAtSegmentLength(eles, distance, unionThickness):
+    result = []
+    for ele, thickness in zip(eles, unionThickness):
+        # Get direction of element
+        direct = ele.Location.Curve.Direction
+        point = ele.Location.Curve.GetEndPoint(0)
+
+        # Divide length into pieces
+        length = ele.LookupParameter('Length').AsDouble()  # ft
+        section = int(length / (distance+ (1 / 304.8)))
+        lstSub = []
+        scale = float(0)
+
+        for i in range(section):
+            if i == 0:
+                scale += float(distance) + float(thickness / 2)
+            elif i > 0:
+                scale += float(distance) + float(thickness)
+
+            vectorDist = direct.Multiply(scale)
+            newpoint = point.Add(vectorDist)
+            lstSub.append(newpoint)
+        result.append(lstSub)
+
+    return result
+
 
 """----------------------MAIN CODE----------------------------"""
 try:
@@ -490,7 +526,8 @@ try:
         manualMode = f._radioButtonManual.Checked
         stepLength = float(f._textBoxStep.Text)  # mm
         cutLength = stepLength / 304.8  # ft
-        stepWall = float(f._textBoxWall.Text)
+        offSetWall = float(f._textBoxWall.Text) / 304.8  # ft
+
         linkName = f._comboBoxLink.Text
 
         if linkName == "No Link":
@@ -501,8 +538,6 @@ try:
 
         # Gọi hàm GetWalls để lấy danh sách tường
         walls = GetWalls(chooseRefLink)
-
-        # print(walls)
 
         # Check if Auto Mode or Manual Mode is selected
         if autoMode:
@@ -519,80 +554,85 @@ try:
 
         # Check intersections between walls and ducts
         intersectingData = GetIntersectingElements(chooseRefLink, walls, ducts)
+        intersectingDucts, intersectingWalls, intersectingPoints, intersectingLines, notIntersectingDucts = ProcessData(
+            intersectingData)
 
-        intersectingDucts = []
-        intersectingWalls = []
-        intersectingPoints = []
-        intersectingLines = []
+        with TransactionGroup(doc, "Split Ducts") as tg:
+            tg.Start()
+            # Process Ducts through the Walls first
+            if len(intersectingDucts) > 0 and offSetWall > 0:
+                intersectingDuctsValid = GetValidDucts(intersectingDucts, cutLength)
+                ductEles = [doc.GetElement(duct.Id) for duct in intersectingDuctsValid]
+                intersectingDuctUnion = [GetDuctUnionFamily(duct) for duct in ductEles]
+                intersectingUnionThickness = [GetUnionThickness(union) for union in intersectingDuctUnion]
+                offSet = offSetWall + (intersectingUnionThickness[0] / 2)
 
-        notIntersectingDucts = []
+                # Process the Points
+                lstVector = [l.Direction for lines in intersectingLines for l in lines]
+                firstLine = [line[0] for line in intersectingLines]
 
-        # Hiển thị kết quả
-        for data in intersectingData:
-            duct = data["Duct"]
-            walls = data["Walls"]
-            midpoints = data["Midpoints"]
-            lines = data["Lines"]
+                # Align lstVector with intersectingPoints
+                alignedVectors = AlignData(intersectingPoints, lstVector)
 
-            if walls:
-                # print("Duct: {}".format(duct.Id))
-                # print("Intersecting Walls: {}".format([wall.Id for wall in walls]))
-                # print("Midpoints: {}".format(midpoints))
-                intersectingDucts.append(duct)
-                intersectingWalls.append(walls)
-                intersectingPoints.append(midpoints)
-                intersectingLines.append(lines)
+                offsetPoints = GetOffSetPoints(offSet, alignedVectors, intersectingPoints)
+                groupedOffsetPoints = GroupOffsetPoints(offsetPoints, intersectingPoints)
+                sortPoints = SortPointByLineDirectionNested(firstLine, groupedOffsetPoints)
+
+
+
+                # THIS
+                lst1Ducts = []
+                lst2Ducts = []
+                lstAllDucts = []
+
+                for duct, subPoint in zip(intersectingDuctsValid, sortPoints):
+                    lst1Ducts = SplitDuctByPoints(duct, subPoint)
+                    lstAllDucts.append(lst1Ducts)
+                    lst2Ducts = lst1Ducts[1:]
+
+                    for ele1, ele2 in zip(lst1Ducts, lst2Ducts):
+                        CreateFittings(ele1, ele2)
+
+                lstDucts = notIntersectingDucts + flattenLv2(lstAllDucts)
+
+                ductsIds = [z.Id for ducts in lstAllDucts for z in ducts]
+                print(ductsIds)
+
+
+
             else:
-                notIntersectingDucts.append(duct)
-                # print("Duct: {}".format(duct.Id))
-                # print("Intersecting Walls: []")
-                # print("Midpoints: []")
+                lstDucts = notIntersectingDucts
 
-        # print(intersectingPoints)
+            # ductId = [duct.Id for duct in lstDucts]
+            # print(50*"-")
+            # print(ductId)
+            # ductsValid = GetValidDucts(lstDucts, cutLength)
+            # ductEles = [doc.GetElement(duct.Id) for duct in ductsValid]
+            # ductUnion = [GetDuctUnionFamily(duct) for duct in ductEles]
+            # unionThickness = [GetUnionThickness(union) for union in ductUnion]
+            #
+            # # Create a list of distances
+            # pts = CurveAtSegmentLength(ductEles, cutLength, unionThickness)
+            #
+            #
+            # # Process notIntersectingDucts First
+            # for points in pts:
+            #     for subPoint in points:
+            #         toPoint = VisualizeGeometry.VisualizePoint(doc, subPoint)
+            #
+            # lst1Ducts = []
+            # lst2Ducts = []
 
-        lstVector = [l.Direction for lines in intersectingLines for l in lines]
-        firstLine = [line[0] for line in intersectingLines]
-        # print(intersectingDucts)
-        # print(50*"-")
-        # print(intersectingLines)
-        # print(50*"-")
-        # print(lstVector)
-        # print(50*"-")
-        # print(intersectingPoints)
+            # for duct, subPoint in zip(ductsValid, pts):
+            #     lst1Ducts = SplitDuctByPoints(duct, subPoint)
+            #     lst2Ducts = lst1Ducts[1:]
+            #
+            #     for ele1, ele2 in zip(lst1Ducts, lst2Ducts):
+            #         CreateFittings(ele1, ele2)
 
-        # Align lstVector with intersectingPoints
-        alignedVectors = []
-        vectorIndex = 0
-        for pointSublist in intersectingPoints:
-            sublistVectors = []
-            for _ in pointSublist:
-                sublistVectors.append(lstVector[vectorIndex])
-                vectorIndex += 1
-            alignedVectors.append(sublistVectors)
-
-        # print(alignedVectors)
-
-        offSet = 500 / 304.8
-        offsetPoints = GetOffSetPoints(offSet, alignedVectors, intersectingPoints)
-        # print(offsetPoints)
-        # print(50 * "-")
-        # print(intersectingPoints)
-        # print(50 * "-")
-        groupedOffsetPoints = GroupOffsetPoints(offsetPoints, intersectingPoints)
-        # print(groupedOffsetPoints)
-        # print(50 * "-")
-        sortPoints = SortPointByLineDirectionNested(firstLine, groupedOffsetPoints)
-        # print(sortPoints)
-        # print(50 * "-")
-        # print(firstLine)
+            tg.Assimilate()
 
 
-        # Process notIntersectingDucts First
-        for points in sortPoints:
-            for subPoint in points:
-                toPoint = VisualizeGeometry.VisualizePoint(doc, subPoint)
-
-        ductsValid = GetValidDucts(notIntersectingDucts,cutLength)
 
 
 
@@ -604,5 +644,4 @@ except Autodesk.Revit.Exceptions.OperationCanceledException:
     pass
 
 except Exception as ex:
-    # pass
     TaskDialog.Show("Error", "Warning: {}".format(ex))  # Corrected string formatting

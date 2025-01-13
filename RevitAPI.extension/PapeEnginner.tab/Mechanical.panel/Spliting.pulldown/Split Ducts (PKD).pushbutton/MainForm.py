@@ -285,8 +285,9 @@ class MainForm(Form):
         # Tooltip
         #
         self._tooltip = ToolTip()
-        self._tooltip.SetToolTip(self._textBoxWall, "Enter the wall length in milimeters.")
-        self._tooltip.SetToolTip(self._textBoxStep, "Enter the step length in milimeters.")
+        self._tooltip.SetToolTip(self._textBoxWall,
+                                 "Enter the offset wall length in milimeters.\nFor example if you would like to have a 1000mm duct, you should type 500.\nRemeber that the offset Wall Length has to be smaller than Step Length. ")
+        self._tooltip.SetToolTip(self._textBoxStep, "Enter the step length in milimeters.\nThe Step length has to be larger than offset Wall Length and 0")
         self._tooltip.SetToolTip(self._radioButtonAuto, "Select all ducts in view as per Select Mode")
         self._tooltip.SetToolTip(self._radioButtonManual, "Select ducts by picking")
         self._tooltip.SetToolTip(self._radioButtonPlan, "Select all ducts in view but vertical ducts")
@@ -362,8 +363,10 @@ class MainForm(Form):
 
             lengthValue = float(lengthInput)  # Try converting to float
             wallValue = float(wallInput)
-            if lengthValue <= 0 or wallValue <= 0:
+            if lengthValue <= 0 or wallValue < 0:
                 ShowNotification('Warning', 'Please enter a valid input Length.')
+            elif lengthValue < wallValue:
+                ShowNotification("Warning", "Step Length has to be larger than OffsetWall")
             else:
                 # Process the input as necessary (e.g., pass length to a duct splitting function)
                 self.DialogResult = System.Windows.Forms.DialogResult.OK
