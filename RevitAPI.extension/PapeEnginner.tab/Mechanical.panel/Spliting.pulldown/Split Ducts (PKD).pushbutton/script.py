@@ -630,7 +630,7 @@ try:
 
     # Retrieve previously saved settings (default to blank or zero if not found)
     previousStepLength = Config.get_option("StepLength", "0")  # Default: 0mm
-    previousWallOffset = Config.get_option("WallOffset", "0")    # Default: 0mm
+    previousWallOffset = Config.get_option("WallOffset", "0")  # Default: 0mm
     previousLinkName = Config.get_option("LinkName", "No Link")  # Default: "No Link"
 
     # If 'OK' is clicked on the form

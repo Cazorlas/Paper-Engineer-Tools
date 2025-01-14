@@ -4,6 +4,12 @@ tooltip: >-
   Match the Parameter from a selected element
             
 
+context:
+    - any:
+        - OST_Rooms
+        - OST_Spaces
+    
+background: '#ff0000' 
 
 help_url: "https://www.youtube.com/@paper.engineer"
 

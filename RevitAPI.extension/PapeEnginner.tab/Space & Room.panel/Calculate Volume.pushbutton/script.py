@@ -45,22 +45,46 @@ version = int(app.VersionNumber)
 """ ----------------------FUNCTIONS----------------------------"""
 
 
-def GetTotalVolume(lstEles):
-    totalVolumeFt3 = float(0)
+def GetVolumes(lstEles):
+    totalRoomVolumeFt3 = 0.0
+    totalSpaceVolumeFt3 = 0.0
 
     for ele in lstEles:
-        if ele.Category.Name == "Spaces" or ele.Category.Name == "Rooms":
+        if ele.Category.Name == "Rooms":
             volumeParam = ele.LookupParameter("Volume")  # Lấy tham số Volume
             if volumeParam and volumeParam.HasValue:
-                totalVolumeFt3 += volumeParam.AsDouble()  # Thêm giá trị thể tích vào tổng (ft³)
+                totalRoomVolumeFt3 += volumeParam.AsDouble()  # Thêm giá trị thể tích vào tổng (ft³)
+        elif ele.Category.Name == "Spaces":
+            volumeParam = ele.LookupParameter("Volume")
+            if volumeParam and volumeParam.HasValue:
+                totalSpaceVolumeFt3 += volumeParam.AsDouble()
 
     # Chuyển đổi từ ft³ sang m³
-    totalVolumeM3 = totalVolumeFt3 * 0.0283168466
+    totalRoomVolumeM3 = totalRoomVolumeFt3 * 0.0283168466
+    totalSpaceVolumeM3 = totalSpaceVolumeFt3 * 0.0283168466
 
-    # Chuyển đổi sang m³/h (giả sử tính toán theo giờ)
-    totalVolumeM3H = totalVolumeM3  # (giữ nguyên nếu không có thêm bước nào)
+    return totalRoomVolumeM3, totalSpaceVolumeM3
 
-    return totalVolumeM3H
+
+def ShowTaskDialog(title, mainInstruction, icon, mainContent, footerText, footerUrl):
+    # Tạo TaskDialog
+    dialog = TaskDialog(title)
+    dialog.TitleAutoPrefix = False
+    dialog.MainInstruction = mainInstruction
+    dialog.MainIcon = icon
+    dialog.MainContent = mainContent
+    dialog.CommonButtons = TaskDialogCommonButtons.Ok
+    dialog.MainIcon = TaskDialogIcon.TaskDialogIconInformation
+
+    # Kích hoạt thanh tiến trình kiểu marquee
+    # dialog.EnableMarqueeProgressBar = True
+
+    # Định dạng FooterText với thẻ <a> và gán vào FooterText
+    dialog.FooterText = '<a href="{0}">{1}</a>'.format(footerUrl, footerText)
+
+    # Hiển thị TaskDialog và nhận kết quả
+
+    return dialog.Show()
 
 
 """ ----------------------MAIN CODE----------------------------"""
@@ -69,20 +93,40 @@ try:
     selection = uidoc.Selection.GetElementIds()
 
     if not selection:
-        TaskDialog.Show("Error", "There is no eleements to choose")
+        TaskDialog.Show("Error", "There are no elements to choose")
     else:
         lstEle = [doc.GetElement(e) for e in selection]
-        totalVolume = GetTotalVolume(lstEle)
+        totalRoomVolume, totalSpaceVolume = GetVolumes(lstEle)
 
         # Hiển thị tổng thể tích
-        if totalVolume > 0:
-            TaskDialog.Show("Total Volume", "The total volume of selected spaces is {:.2f} m³/h".format(totalVolume))
+        if totalRoomVolume > 0 or totalSpaceVolume > 0:
+            ShowTaskDialog(
+                title="Paper Engineer",
+                mainInstruction="Total Volume",
+                icon=TaskDialogIcon.TaskDialogIconInformation,
+                mainContent="Rooms: {:.2f} m³\nSpaces: {:.2f} m³".format(totalRoomVolume, totalSpaceVolume),
+                footerText="Get help",
+                footerUrl="https://www.youtube.com/@paper.engineer"
+            )
         else:
-            TaskDialog.Show("Total Volume", "No spaces with volume were found in the selection.")
-
+            ShowTaskDialog(
+                title="Paper Engineer",
+                mainInstruction="Total Volume",
+                icon=TaskDialogIcon.TaskDialogIconInformation,
+                mainContent="No rooms or spaces with volume were found in the selection.",
+                footerText="Get help",
+                footerUrl="https://www.youtube.com/@paper.engineer"
+            )
 
 except Autodesk.Revit.Exceptions.OperationCanceledException:
     pass
 
 except Exception as ex:
-    TaskDialog.Show("Error", "Warning: {}".format(ex))  # Corrected string formatting
+    ShowTaskDialog(
+        title="Paper Engineer",
+        mainInstruction="Warning",
+        icon=TaskDialogIcon.TaskDialogIconWarning,
+        mainContent="Warning: {}".format(ex),
+        footerText="Get help",
+        footerUrl="https://www.youtube.com/@paper.engineer"
+    )
