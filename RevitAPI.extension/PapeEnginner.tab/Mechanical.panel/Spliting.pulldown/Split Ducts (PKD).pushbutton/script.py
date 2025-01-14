@@ -12,11 +12,6 @@ from System.Collections.Generic import *
 clr.AddReference('RevitAPI')
 clr.AddReference('RevitAPIUI')
 
-from ElementGeometry import *
-from ModelSelection import *
-from VisualizeGeometry import *
-from RevitUtils import *
-
 import Autodesk
 from Autodesk.Revit.UI import *
 from Autodesk.Revit.UI.Selection import *
@@ -517,7 +512,8 @@ def CurveAtSegmentLength(eles, distance, unionThickness):
     for ele, thickness in zip(eles, unionThickness):
         # Get direction of element
         direct = ele.Location.Curve.Direction
-        point = ele.Location.Curve.GetEndPoint(0)
+        startPoint = ele.Location.Curve.GetEndPoint(0)
+        # endPoint = ele.Location.Curve.GetEndPoint(1)
 
         # Divide length into pieces
         length = ele.LookupParameter('Length').AsDouble()  # ft
@@ -532,9 +528,8 @@ def CurveAtSegmentLength(eles, distance, unionThickness):
             elif i > 0:
                 scale += float(distance) + float(thickness)
 
-
             vectorDist = direct.Multiply(scale)
-            newpoint = point.Add(vectorDist)
+            newpoint = startPoint.Add(vectorDist)
             lstSub.append(newpoint)
 
         # Handle the last section if it's smaller than 150mm (0.492 ft)
@@ -547,7 +542,7 @@ def CurveAtSegmentLength(eles, distance, unionThickness):
                 # Create a new segment for the remaining length
                 scale += lastSectionLength
                 vectorDist = direct.Multiply(scale)
-                newpoint = point.Add(vectorDist)
+                newpoint = startPoint.Add(vectorDist)
                 lstSub.append(newpoint)
 
         result.append(lstSub)
@@ -555,7 +550,74 @@ def CurveAtSegmentLength(eles, distance, unionThickness):
     return result
 
 
+# def CurveAtSegmentLength(eles, distance, unionThickness):
+#     """
+#     Chia đoạn ống thành các đoạn nhỏ với chiều dài cố định.
+#     Đảm bảo không có đoạn ống thừa nào nhỏ hơn 250mm.
+#
+#     :param eles: Danh sách các đối tượng ống.
+#     :param distance: Chiều dài mỗi đoạn (ft).
+#     :param unionThickness: Độ dày của kết nối (ft).
+#     :return: Danh sách các điểm chia đoạn cho từng ống.
+#     """
+#     result = []
+#     minLength = 250 / 304.8  # 250mm in feet
+#
+#     for ele, thickness in zip(eles, unionThickness):
+#         # Kiểm tra tính hợp lệ của ống
+#         if ele is None or ele.Location is None or ele.Location.Curve is None:
+#             continue
+#
+#         # Get direction of element
+#         direct = ele.Location.Curve.Direction
+#         startPoint = ele.Location.Curve.GetEndPoint(0)
+#         endPoint = ele.Location.Curve.GetEndPoint(1)
+#
+#         # Lấy chiều dài ống
+#         length_param = ele.LookupParameter('Length')
+#         if length_param is None:
+#             continue
+#
+#         length = length_param.AsDouble()  # Chiều dài ống (ft)
+#         section = int(length / (distance + (1 / 304.8)))  # Số đoạn chia
+#         lstSub = []
+#         scale = float(0)
+#
+#         # Tính toán các điểm chia
+#         for i in range(section):
+#             if i == 0:
+#                 scale += float(distance) + float(thickness / 2)
+#             else:
+#                 scale += float(distance) + float(thickness)
+#
+#             vectorDist = direct.Multiply(scale)
+#             newpoint = startPoint.Add(vectorDist)
+#             lstSub.append(newpoint)
+#
+#         # Xử lý đoạn thừa cuối cùng
+#         if lstSub:
+#             lastCutPoint = lstSub[-1]
+#             remainingLength = lastCutPoint.DistanceTo(endPoint)
+#
+#             if remainingLength < minLength:  # Nếu đoạn thừa nhỏ hơn 250mm
+#                 # Cộng đoạn thừa vào điểm chia cuối cùng
+#                 lstSub[-1] = endPoint
+#             else:
+#                 # Nếu đoạn thừa lớn hơn hoặc bằng 250mm, thêm điểm cuối
+#                 lstSub.append(endPoint)
+#         else:
+#             # Nếu không có điểm chia nào, thêm trực tiếp điểm cuối
+#             lstSub.append(endPoint)
+#
+#         result.append(lstSub)
+#
+#     return result
+
+
 """----------------------MAIN CODE----------------------------"""
+# Access the script's configuration
+config = script.get_config()
+
 try:
     nameLink, refLinkInstance, linkedTransform = CollectLinkData()
     nameLinkRemoveFirst = nameLink[1:]
@@ -565,6 +627,11 @@ try:
 
     f = MainForm(nameLink)
     f.ShowDialog()
+
+    # Retrieve previously saved settings (default to blank or zero if not found)
+    previousStepLength = Config.get_option("StepLength", "0")  # Default: 0mm
+    previousWallOffset = Config.get_option("WallOffset", "0")    # Default: 0mm
+    previousLinkName = Config.get_option("LinkName", "No Link")  # Default: "No Link"
 
     # If 'OK' is clicked on the form
     if f.DialogResult == System.Windows.Forms.DialogResult.OK:
@@ -669,11 +736,6 @@ try:
             # Create a list of distances
             pts = CurveAtSegmentLength(ductEles, cutLength, unionThickness)
 
-            # Process notIntersectingDucts First
-            for points in pts:
-                for subPoint in points:
-                    toPoint = VisualizeGeometry.VisualizePoint(doc, subPoint)
-
             lst1Ducts = []
             lst2Ducts = []
 
@@ -685,13 +747,6 @@ try:
                     CreateFittings(ele1, ele2)
 
             tg.Assimilate()
-
-
-
-
-
-
-
 
 
 except Autodesk.Revit.Exceptions.OperationCanceledException:

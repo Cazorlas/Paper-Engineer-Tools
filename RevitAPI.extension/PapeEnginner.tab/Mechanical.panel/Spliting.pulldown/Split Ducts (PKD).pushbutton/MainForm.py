@@ -14,6 +14,7 @@ from RevitServices.Transactions import TransactionManager
 
 from SubForm import ShowNotification
 
+
 clr.AddReference("RevitNodes")
 import Revit
 
@@ -112,7 +113,8 @@ class MainForm(Form):
         self._groupBoxModeSelect.Size = System.Drawing.Size(294, 70)
         self._groupBoxModeSelect.TabIndex = 1
         self._groupBoxModeSelect.TabStop = False
-        self._groupBoxModeSelect.Enabled = False
+        if self._radioButtonManual:
+            self._groupBoxModeSelect.Enabled = False
         self._groupBoxModeSelect.Text = "Select (Work when you choose Auto Mode)"
         #
         # radioButtonAuto
@@ -378,3 +380,4 @@ class MainForm(Form):
     def ButtonCancelClick(self, sender, e):
         """Cancel Button"""
         self.Close()
+
