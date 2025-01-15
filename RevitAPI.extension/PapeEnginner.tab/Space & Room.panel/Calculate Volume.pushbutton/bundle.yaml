@@ -1,15 +1,13 @@
 title: Calculate Volume
 
 tooltip: >-
-  Match the Parameter from a selected element
+  Calculate the sum of volume (spaces or rooms)
             
 
 context:
     - any:
-        - OST_Rooms
-        - OST_Spaces
-    
-background: '#ff0000' 
+        - rooms
+        - spaces
 
 help_url: "https://www.youtube.com/@paper.engineer"
 
