@@ -14,7 +14,6 @@ from RevitServices.Transactions import TransactionManager
 
 from SubForm import ShowNotification
 
-
 clr.AddReference("RevitNodes")
 import Revit
 
@@ -23,6 +22,8 @@ clr.ImportExtensions(Revit.GeometryConversion)
 
 clr.AddReference("RevitAPIUI")
 from Autodesk.Revit.UI import *
+
+from pyrevit import forms, revit, script, EXEC_PARAMS
 
 clr.AddReference('RevitAPI')
 from Autodesk.Revit.DB import *
@@ -52,8 +53,9 @@ uidoc = __revit__.ActiveUIDocument
 
 
 class MainForm(Form):
-    def __init__(self, links):
+    def __init__(self, links, config):
         self.links = links
+        self.config = config  # Lưu config
         self.InitializeComponent()
 
     def InitializeComponent(self):
@@ -64,6 +66,21 @@ class MainForm(Form):
         # Load custom icon (if available)
         if os.path.exists(icon_path):
             self.Icon = Icon(icon_path)
+
+        # Get Value from Config
+        configStepLength = self.config.get_option("step_length", "1500")  # Default: 1500mm
+        configWallOffset = self.config.get_option("wall_offset", "500")  # Default: 500mm
+
+        # Ensure `selected_link` exists in the config and is valid
+        selected_link_index = self.config.get_option("selected_link", 0)
+        configSelectedLink = (
+            selected_link_index if 0 <= selected_link_index < len(self.links) else 0
+        )
+
+        configManualButton = self.config.get_option("manual_button", True)
+        configPlanButton = self.config.get_option("plan_button", True)
+        configVerticalButton = self.config.get_option("vertical_button", False)
+        configAllButton = self.config.get_option("all_button", False)
 
         self._groupBoxMode = System.Windows.Forms.GroupBox()
         self._groupBoxModeSelect = System.Windows.Forms.GroupBox()
@@ -113,24 +130,17 @@ class MainForm(Form):
         self._groupBoxModeSelect.Size = System.Drawing.Size(294, 70)
         self._groupBoxModeSelect.TabIndex = 1
         self._groupBoxModeSelect.TabStop = False
-        if self._radioButtonManual:
+
+        if configManualButton:
             self._groupBoxModeSelect.Enabled = False
+        else:
+            self._groupBoxModeSelect.Enabled = True
+
         self._groupBoxModeSelect.Text = "Select (Work when you choose Auto Mode)"
-        #
-        # radioButtonAuto
-        #
-        self._radioButtonAuto.Location = System.Drawing.Point(67, 30)
-        self._radioButtonAuto.Name = "radioButtonAuto"
-        self._radioButtonAuto.Size = System.Drawing.Size(104, 24)
-        self._radioButtonAuto.TabIndex = 0
-        self._radioButtonAuto.Text = "Auto"
-        self._radioButtonAuto.UseVisualStyleBackColor = True
-        self._radioButtonAuto.CheckedChanged += self.RadioButtonAuto
-        self._radioButtonAuto.CheckedChanged += self.RadioButtonCheckedChanged
         #
         # radioButtonManual
         #
-        self._radioButtonManual.Checked = True
+        self._radioButtonManual.Checked = configManualButton
         self._radioButtonManual.Location = System.Drawing.Point(162, 30)
         self._radioButtonManual.Name = "radioButtonManual"
         self._radioButtonManual.Size = System.Drawing.Size(104, 24)
@@ -141,9 +151,21 @@ class MainForm(Form):
         self._radioButtonManual.CheckedChanged += self.RadioButtonManual
         self._radioButtonManual.CheckedChanged += self.RadioButtonCheckedChanged
         #
+        # radioButtonAuto
+        #
+        self._radioButtonAuto.Checked = not configManualButton
+        self._radioButtonAuto.Location = System.Drawing.Point(67, 30)
+        self._radioButtonAuto.Name = "radioButtonAuto"
+        self._radioButtonAuto.Size = System.Drawing.Size(104, 24)
+        self._radioButtonAuto.TabIndex = 0
+        self._radioButtonAuto.Text = "Auto"
+        self._radioButtonAuto.UseVisualStyleBackColor = True
+        self._radioButtonAuto.CheckedChanged += self.RadioButtonAuto
+        self._radioButtonAuto.CheckedChanged += self.RadioButtonCheckedChanged
+        #
         # radioButtonPlan
         #
-        self._radioButtonPlan.Checked = True
+        self._radioButtonPlan.Checked = configPlanButton
         self._radioButtonPlan.Location = System.Drawing.Point(29, 31)
         self._radioButtonPlan.Name = "radioButtonPlan"
         self._radioButtonPlan.Size = System.Drawing.Size(104, 24)
@@ -155,6 +177,7 @@ class MainForm(Form):
         #
         # radioButtonVertical
         #
+        self._radioButtonVertical.Checked = configVerticalButton
         self._radioButtonVertical.Location = System.Drawing.Point(108, 31)
         self._radioButtonVertical.Name = "radioButtonVertical"
         self._radioButtonVertical.Size = System.Drawing.Size(104, 24)
@@ -165,6 +188,7 @@ class MainForm(Form):
         #
         # radioButtonAll
         #
+        self._radioButtonAll.Checked = configAllButton
         self._radioButtonAll.Location = System.Drawing.Point(218, 31)
         self._radioButtonAll.Name = "radioButtonAll"
         self._radioButtonAll.Size = System.Drawing.Size(104, 24)
@@ -195,6 +219,7 @@ class MainForm(Form):
         self._textBoxWall.ScrollBars = System.Windows.Forms.ScrollBars.Horizontal
         self._textBoxWall.Size = System.Drawing.Size(173, 21)
         self._textBoxWall.TabIndex = 0
+        self._textBoxWall.Text = configWallOffset
         self._textBoxWall.TextChanged += self.TextBoxWallTextChanged
         #
         # labelWalls
@@ -222,6 +247,7 @@ class MainForm(Form):
         self._textBoxStep.Name = "textBoxStep"
         self._textBoxStep.Size = System.Drawing.Size(173, 21)
         self._textBoxStep.TabIndex = 3
+        self._textBoxStep.Text = configStepLength
         self._textBoxStep.TextChanged += self.TextBoxStepTextChanged
         #
         # groupBoxLink
@@ -245,7 +271,7 @@ class MainForm(Form):
         self._comboBoxLink.Size = System.Drawing.Size(276, 23)
         self._comboBoxLink.Items.AddRange(System.Array[System.Object](self.links))
         self._comboBoxLink.TabIndex = 0
-        self._comboBoxLink.SelectedIndex = 0
+        self._comboBoxLink.SelectedIndex = configSelectedLink
         self._comboBoxLink.SelectedIndexChanged += self.ComboBoxLinkChanged
         #
         # buttonOK
@@ -289,7 +315,8 @@ class MainForm(Form):
         self._tooltip = ToolTip()
         self._tooltip.SetToolTip(self._textBoxWall,
                                  "Enter the offset wall length in milimeters.\nFor example if you would like to have a 1000mm duct, you should type 500.\nRemeber that the offset Wall Length has to be smaller than Step Length. ")
-        self._tooltip.SetToolTip(self._textBoxStep, "Enter the step length in milimeters.\nThe Step length has to be larger than offset Wall Length and 0")
+        self._tooltip.SetToolTip(self._textBoxStep,
+                                 "Enter the step length in milimeters.\nThe Step length has to be larger than offset Wall Length and 0")
         self._tooltip.SetToolTip(self._radioButtonAuto, "Select all ducts in view as per Select Mode")
         self._tooltip.SetToolTip(self._radioButtonManual, "Select ducts by picking")
         self._tooltip.SetToolTip(self._radioButtonPlan, "Select all plans ducts in view")
@@ -338,11 +365,18 @@ class MainForm(Form):
     def RadioButtonAll(self, sender, e):
         pass
 
+    # def RadioButtonCheckedChanged(self, sender, e):
+    #     if sender == self._radioButtonAuto:
+    #         self._groupBoxModeSelect.Enabled = True
+    #     elif sender == self._radioButtonManual:
+    #         self._groupBoxModeSelect.Enabled = False
+
     def RadioButtonCheckedChanged(self, sender, e):
-        if sender == self._radioButtonAuto:
+        if self._radioButtonAuto.Checked:
             self._groupBoxModeSelect.Enabled = True
-        elif sender == self._radioButtonManual:
+        elif self._radioButtonManual.Checked:
             self._groupBoxModeSelect.Enabled = False
+
 
     def TextBoxWallTextChanged(self, sender, e):
         pass
@@ -355,6 +389,16 @@ class MainForm(Form):
 
     def LinkLabelHelpLinkClicked(self, sender, e):
         System.Diagnostics.Process.Start("https://www.youtube.com/@paper.engineer")
+
+    def save_config(self):
+        self.config.step_length = self._textBoxStep.Text.strip()
+        self.config.wall_offset = self._textBoxWall.Text.strip()
+        self.config.selected_link = self._comboBoxLink.SelectedIndex
+        self.config.manual_button = self._radioButtonManual.Checked
+        self.config.plan_button = self._radioButtonPlan.Checked
+        self.config.vertical_button = self._radioButtonVertical.Checked
+        self.config.all_button = self._radioButtonAll.Checked
+        script.save_config()
 
     def ButtonOKClick(self, sender, e):
 
@@ -371,6 +415,8 @@ class MainForm(Form):
                 ShowNotification("Warning", "Step Length has to be larger than OffsetWall")
             else:
                 # Process the input as necessary (e.g., pass length to a duct splitting function)
+                self.save_config()
+
                 self.DialogResult = System.Windows.Forms.DialogResult.OK
                 self.Close()
 
@@ -380,4 +426,3 @@ class MainForm(Form):
     def ButtonCancelClick(self, sender, e):
         """Cancel Button"""
         self.Close()
-

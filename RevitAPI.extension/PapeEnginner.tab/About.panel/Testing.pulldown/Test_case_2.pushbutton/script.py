@@ -27,6 +27,10 @@ import Revit  # Import Revit namespace in RevitNodes
 clr.ImportExtensions(Revit.Elements)
 clr.ImportExtensions(Revit.GeometryConversion)
 
+from pyrevit import EXEC_PARAMS
+
+from rpw.ui.forms import FlexForm, Label, ComboBox, TextBox, TextBox, Separator, Button, CheckBox
+
 clr.AddReference("RevitServices")
 import RevitServices
 from RevitServices.Persistence import DocumentManager  # Document management in Revit
@@ -45,55 +49,47 @@ selection = uidoc.Selection
 
 """----------------------FUNCTION----------------------------"""
 
-
-class SelectionFilter(ISelectionFilter):
-    """Filter to select only elements of a specific category."""
-
-    def __init__(self, category_name):
-        self.category_name = category_name
-
-    def AllowElement(self, e):
-        if e.Category and e.Category.Name == self.category_name:
-            return True
-        return False
-
-    def AllowReference(self, ref, point):
-        return False
-
-
-def GetCeilingElements():
-    """Retrieve Ceiling elements from the active document."""
-    refCeilingElements = FilteredElementCollector(doc).OfClass(Ceiling).WhereElementIsNotElementType().ToElements()
-    ceilingElements = [doc.GetElement(ref.Id) for ref in refCeilingElements]
-    return ceilingElements
-
-
-def CreateCeilingCurves(ceilingElement):
-    """Extract boundary curves from a Ceiling element."""
-    curveList = []
-
-    # Get sketch of ceiling
-    ceilingSketch = ceilingElement.GetSketch()
-
-    if ceilingSketch:
-        # Extract ModelCurves from the sketch
-        for modelCurveId in ceilingSketch.GetAllModelCurveIds():
-            modelCurve = doc.GetElement(modelCurveId)
-            curve = modelCurve.GeometryCurve  # Get the curve geometry
-            curveList.append(curve)
-
-    return curveList
-
-
 """----------------------MAIN CODE----------------------------"""
-
 try:
-    # Get Ceiling elements
-    ceilingElements = GetCeilingElements()
+    # Lấy config
+    config = script.get_config(EXEC_PARAMS.command_name)
 
-    for ceiling in ceilingElements:
-        curves = CreateCeilingCurves(ceiling)
+    dictionary_1 = {'Opt 1': 10.0, 'Opt 2': 20.0}
 
+    # Lấy giá trị:
+    configComboxBox = config.get_option('combobox',20.0)
+    configTextBox = config.get_option('textbox','First Run')
+    configCheckBox = config.get_option('checkbox',True)
+
+    # keyComboBox = [key for key,val in dictionary_1.items() if val == configComboxBox]
+    for key,val in dictionary_1.items():
+        if val == configComboxBox:
+            keyComboBox = str(key)
+            break
+
+    # Tạo form với giá trị mặc định từ config
+    components = [
+        Label('Pick Style:'),
+        ComboBox('combobox1', {'Opt 1': 10.0, 'Opt 2': 20.0}, default=keyComboBox),
+        Label('Enter Name:'),
+        TextBox('textbox1', Text=configTextBox),
+        CheckBox('checkbox1', 'Check this', default=configCheckBox),
+        Separator(),
+        Button('Select')
+    ]
+    form = FlexForm('Paper Engineer', components)
+    form.show()
+    # # values = form.get_values()
+    #
+    # Nếu người dùng nhấn "Select"
+    if form.values:
+        config.combobox = form.values.get('combobox1')
+        config.textbox = form.values.get('textbox1')
+        config.checkbox = form.values.get('checkbox1')
+        script.save_config()
+        # logger = script.get_logger()
+        # logger.warning()
+        print(form.values)
 
 
 

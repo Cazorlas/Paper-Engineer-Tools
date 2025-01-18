@@ -21,7 +21,8 @@ from Autodesk.Revit.DB.Mechanical import Duct, MechanicalUtils
 from Autodesk.Revit.DB.Plumbing import Pipe, PlumbingUtils
 
 from rpw.ui.forms import FlexForm, Label, ComboBox, TextBox, Separator, Button, CommandLink, CheckBox
-from pyrevit import forms, revit, script
+from pyrevit import forms, revit, script, EXEC_PARAMS
+
 # from SubForm import ShowNotification
 from MainForm import MainForm
 
@@ -615,23 +616,20 @@ def CurveAtSegmentLength(eles, distance, unionThickness):
 
 
 """----------------------MAIN CODE----------------------------"""
-# Access the script's configuration
-config = script.get_config()
+
 
 try:
+    # Access the script's configuration
+    config = script.get_config(EXEC_PARAMS.command_name)
+
     nameLink, refLinkInstance, linkedTransform = CollectLinkData()
     nameLinkRemoveFirst = nameLink[1:]
     dictionary = dict(zip(nameLinkRemoveFirst, refLinkInstance))
 
     """----------------------------RUN FORMS----------------------------"""
 
-    f = MainForm(nameLink)
+    f = MainForm(nameLink,config)
     f.ShowDialog()
-
-    # Retrieve previously saved settings (default to blank or zero if not found)
-    previousStepLength = Config.get_option("StepLength", "0")  # Default: 0mm
-    previousWallOffset = Config.get_option("WallOffset", "0")  # Default: 0mm
-    previousLinkName = Config.get_option("LinkName", "No Link")  # Default: "No Link"
 
     # If 'OK' is clicked on the form
     if f.DialogResult == System.Windows.Forms.DialogResult.OK:
@@ -642,11 +640,22 @@ try:
         verticalOption = f._radioButtonVertical.Checked
         allOption = f._radioButtonAll.Checked
 
+
+
         stepLength = float(f._textBoxStep.Text)  # mm
         cutLength = stepLength / 304.8  # ft
         offSetWall = float(f._textBoxWall.Text) / 304.8  # ft
 
         linkName = f._comboBoxLink.Text
+
+        # print('Auto mode: {}'.format(autoMode))
+        # print('Manual mode: {}'.format(manualMode))
+        # print('Plan Option: {}'.format(planOption))
+        # print('Vertical Option: {}'.format(verticalOption))
+        # print('All Option: {}'.format(allOption))
+        # print('Step Length: {}'.format(stepLength))
+        # print('Offset Wall: {}'.format(offSetWall))
+        # print('Link Name: {}'.format(linkName))
 
         if linkName == "No Link":
             chooseRefLink = None
