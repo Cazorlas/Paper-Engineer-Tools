@@ -152,7 +152,7 @@ def GetWalls(refLinkInstance):
         linkedDoc = refLinkInstance.GetLinkDocument()
 
         # Thu thập tường từ tài liệu liên kết
-        refwalls = FilteredElementCollector(linkedDoc, view.Id).OfCategory(
+        refwalls = FilteredElementCollector(linkedDoc).OfCategory(
             BuiltInCategory.OST_Walls).WhereElementIsNotElementType().ToElements()
         # walls = [linkedDoc.GetElement(wall.LinkedElementId) for wall in refwalls]
         walls = refwalls
