@@ -96,7 +96,7 @@ def SelectElementsByCategory(selectedCategories):
     if selectedElements:
         selection.SetElementIds(List[ElementId]([e.Id for e in selectedElements]))
     else:
-        ShowNotification("Erro", "Can not find any Elements")
+        ShowNotification("Error", "Can not find any Elements")
 
 
 """----------------------MAIN CODE----------------------------"""
