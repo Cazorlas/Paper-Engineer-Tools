@@ -178,13 +178,16 @@ def GetElementSolids(element):
     geometryElement = element.get_Geometry(options)
     if geometryElement:
         for geometryObject in geometryElement:
-            if isinstance(geometryObject, Solid) and geometryObject.Volume > 0:
-                solids.append(geometryObject)
+            if isinstance(geometryObject, Solid):
+                if geometryObject.Volume > 0 and geometryObject.Faces.Size > 0:
+                    solids.append(geometryObject)
             elif isinstance(geometryObject, GeometryInstance):
                 for instanceGeometryObject in geometryObject.GetInstanceGeometry():
-                    if isinstance(instanceGeometryObject, Solid) and instanceGeometryObject.Volume > 0:
-                        solids.append(instanceGeometryObject)
+                    if isinstance(instanceGeometryObject, Solid):
+                        if instanceGeometryObject.Volume > 0 and instanceGeometryObject.Faces.Size > 0:
+                            solids.append(instanceGeometryObject)
     return solids
+
 
 
 def GetMidPointOfLine(line):
