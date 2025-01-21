@@ -175,7 +175,8 @@ def GetElementSolids(element):
     solids = []
     options = Options()
     options.ComputeReferences = True
-    geometryElement = element.get_Geometry(options)
+    # geometryElement = element.get_Geometry(options)
+    geometryElement = element.Geometry[options]
     if geometryElement:
         for geometryObject in geometryElement:
             if isinstance(geometryObject, Solid):
@@ -257,7 +258,8 @@ def GetIntersectingElements(linkInstance, walls, ducts):
         linesForDuct = []
 
         for wall in walls:
-            wallSolids = wall.Geometry[opt]
+            # wallSolids = wall.Geometry[opt]
+            wallSolids = GetElementSolids(wall)
 
             for wallSolid in wallSolids:
                 transformedWallSolid = SolidUtils.CreateTransformed(wallSolid, transform)
