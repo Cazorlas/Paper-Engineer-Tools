@@ -15,6 +15,10 @@ import clr  # Common Language Runtime for .NET
 import System
 import math  # Standard Python math library
 
+# Excel Libraary
+clr.AddReference('Microsoft.Office.Interop.Excel')
+from Microsoft.Office.Interop import Excel
+
 # Import necessary .NET and Revit API libraries
 from System.Collections.Generic import *
 from pyrevit import forms, revit, script, EXEC_PARAMS
@@ -53,51 +57,27 @@ DB = Autodesk.Revit.DB
 output = script.get_output()
 version = int(app.VersionNumber)
 selection = uidoc.Selection
-# Đường dẫn tới file lưu trữ lựa chọn
-options_file = 'selected_options.json'
 
 """ ----------------------FUNCTIONS----------------------------"""
 
-# # Định nghĩa lớp MyOption để tạo các tùy chọn
-# class MyOption(forms.TemplateListItem):
-#     @property
-#     def name(self):
-#         return "Option: {}".format(self.item)
-#
-# # Đọc các lựa chọn đã chọn trước đó từ config
-# def load_selected_options():
-#     try:
-#         # Lấy cấu hình của script
-#         config = script.get_config(EXEC_PARAMS.command_name)
-#         # Trả về danh sách các mục đã được chọn trong config
-#         return config.get('selected_categories', [])
-#     except Exception as ex:
-#         print("Error reading the file: {}".format(ex))
-#         return []
-#
-# # Lưu các lựa chọn vào config
-# def save_selected_options(selected):
-#     try:
-#         # Lấy cấu hình của script
-#         config = script.get_config(EXEC_PARAMS.command_name)
-#         # Cập nhật giá trị cấu hình
-#         config.set('selected_categories', selected)
-#         # Lưu lại cấu hình
-#         script.save_config(config)
-#     except Exception as ex:
-#         print("Error saving to config: {}".format(ex))
-#
-# # Lấy danh sách các tùy chọn và đánh dấu các tùy chọn đã chọn
-# def get_options(annotationCategoriesDict):
-#     ops = [MyOption(cate) for cate in annotationCategoriesDict]
-#
-#     # Đọc các tùy chọn đã chọn từ config (nếu có)
-#     selected_options = load_selected_options()
-#     for option in ops:
-#         if option.item in selected_options:
-#             option.checked = True  # Đánh dấu các mục đã chọn
-#
-#     return ops
+
+# Định nghĩa lớp MyOption để tạo danh sách checkbox với tên tùy chọn
+class MyOption(forms.TemplateListItem):
+    def __init__(self, orig_item, checked=False):
+        """
+        Gói một đối tượng (tên danh mục) vào danh sách checkbox.
+
+        Args:
+            orig_item (str): Tên danh mục
+            checked (bool): Trạng thái ban đầu của checkbox (mặc định là False)
+
+        """
+        super(MyOption, self).__init__(orig_item, checked=checked)
+        self.item = orig_item  # Lưu trữ danh mục ban đầu
+
+    @property
+    def name(self):
+        return "{}".format(self.item)  # Hiển thị tên danh mục trong danh sách
 
 
 def Flatten_lv3(lst):
@@ -150,68 +130,269 @@ def GetTaggedElement(tag):
     return result
 
 
-def GroupByKey(items,keys):
-    #Create unique key lists
+def SetDifference(lst1, lst2):
+    """lst 1 > lst2"""
+    result = []
+    for item1 in lst1:
+        if item1 not in lst2:
+            result.append(item1)
+    return result
+
+
+def GroupByKey(items, keys):
+    # Create unique key lists
     unique_keys = []
     for key in keys:
         if key not in unique_keys:
             unique_keys.append(key)
 
-    #Create empty lists according to unique keys
+    # Create empty lists according to unique keys
     group_lst = []
     for i in range(len(unique_keys)):
         group_lst.append([])
 
-    #Get index of the input keys in unique key lists
+    # Get index of the input keys in unique key lists
     ind_lst = []
     for key in keys:
         ind_lst.append(unique_keys.index(key))
 
-    #Group by key
-    for item, ind in zip(items,ind_lst):
+    # Group by key
+    for item, ind in zip(items, ind_lst):
         group_lst[ind].append(item)
 
-    return group_lst,unique_keys
+    return group_lst, unique_keys
 
-"""----------------------MAIN CODE----------------------------"""
+
+def GetElementCategory(ele):
+    return ele.Category.Name
+
+
+def GetFamilyNameOfElement(ele):
+    return ele.LookupParameter('Family').AsValueString()
+
+
+def GetTypeNameOfElement(ele):
+    return ele.Name
+
+
+def ProcessCategoryTag(lstCate):
+    result = []
+    for cate in lstCate:
+        getAll = AllElementOfCategoryInView(view, cate)
+        if len(getAll) == 0:
+            result.append(False)
+        else:
+            result.append(True)
+    return result
+
+
+def Transpose(data):
+    cleaned_data = []
+    for sheet_data in data:
+        sheet_rows = []
+        for row in sheet_data:
+            if isinstance(row, tuple):  # Nếu là tuple thì giữ nguyên
+                sheet_rows.append(list(row))
+            elif isinstance(row, list):  # Nếu là list thì mở rộng từng hàng
+                for sub_row in row:
+                    sheet_rows.append(list(sub_row))
+        cleaned_data.append(sheet_rows)
+
+    return cleaned_data
+
+
+def ExportToExcel(sheet_titles, start_row, start_column, data):
+    """
+    Xuất dữ liệu ra file Excel với nhiều sheet.
+
+    Args:
+        sheet_titles (list): Danh sách tên các sheet.
+        start_row (int): Dòng bắt đầu ghi dữ liệu.
+        start_column (int): Cột bắt đầu ghi dữ liệu.
+        data (list): Danh sách dữ liệu cấp 3 (sheet), cấp 2 (row).
+    """
+    transposeData = Transpose(data)
+
+    # Chọn nơi lưu file Excel
+    file_path = forms.save_file(
+        file_ext='xlsx',
+        title='Chọn nơi lưu file Excel',
+        default_name='ExportedData.xlsx'
+    )
+
+    if not file_path:
+        print("Không có đường dẫn được chọn. Hủy thao tác.")
+        return
+
+    # Tạo ứng dụng Excel
+    excel_app = Excel.ApplicationClass()
+    excel_app.Visible = True  # Hiển thị Excel
+
+    # Tạo workbook mới
+    workbook = excel_app.Workbooks.Add()
+
+    # Kiểm tra danh sách sheet và dữ liệu có khớp không
+    if len(sheet_titles) != len(data):
+        print("Lỗi: Số lượng sheet không khớp với số lượng data.")
+        return
+
+    # Xóa các sheet mặc định nếu có
+    while workbook.Sheets.Count > 1:
+        workbook.Sheets(1).Delete()
+
+    print("So luong sheet duoc tao:", len(sheet_titles))
+    print("Data Input:")
+    for i, d in enumerate(transposeData):
+        print("Sheet {}: {}".format(sheet_titles[i], d))
+
+    # Duyệt qua từng sheet
+    for sheet_index, sheet_name in enumerate(sheet_titles):
+        # Tạo sheet mới
+        if sheet_index >= workbook.Sheets.Count:
+            worksheet = workbook.Sheets.Add(After=workbook.Sheets(workbook.Sheets.Count))
+        else:
+            worksheet = workbook.Sheets(sheet_index + 1)
+
+        # Đặt tên sheet (giới hạn 31 ký tự)
+        worksheet.Name = sheet_name[:31]
+
+        # Lấy dữ liệu cho sheet hiện tại
+        sheet_data = transposeData[sheet_index]
+        # print(50*"-")
+        # print(sheet_data)
+
+        #     # Kiểm tra dữ liệu có hợp lệ không
+        #     if not isinstance(sheet_data, list) or not isinstance(sheet_data[0], list):
+        #         print("Loi: Du lieu '{}' khong hop le".format(sheet_name))
+        #         continue
+        #
+        # Ghi tiêu đề cột
+        worksheet.Cells(start_row, start_column).Value2 = "Family"
+        worksheet.Cells(start_row, start_column + 1).Value2 = "Type"
+        worksheet.Cells(start_row, start_column + 2).Value2 = "ID"
+
+        # Ghi dữ liệu vào từng hàng & cột
+        for row_idx, row_data in enumerate(sheet_data, start=start_row + 1):
+            for col_idx, value in enumerate(row_data):
+                worksheet.Cells(row_idx, start_column + col_idx).Value2 = value
+
+    # Lưu workbook
+    workbook.SaveAs(file_path)
+
+    # # Hiển thị thông báo hoàn thành
+    # forms.alert(
+    #     message="Dữ liệu đã được xuất thành công!",
+    #     title="Xuất dữ liệu thành công",
+    #     exitscript=True
+    # )
+
+    """----------------------MAIN CODE----------------------------"""
+
+
 try:
+
     # Lấy config
-    # config = script.get_config(EXEC_PARAMS.command_name)
+    config = script.get_config(EXEC_PARAMS.command_name)
+    previousSelectedCategories = config.get_option('selected_category', False)
 
     annotationCategories = AllAnnotationCategories()
     annotationCategoriesName = [cate.Name for cate in annotationCategories]
     annotationCategoriesDict = dict(zip(annotationCategoriesName, annotationCategories))
+    sortedData = sorted(annotationCategoriesDict)
 
     # Lấy danh sách tùy chọn
-    ops = sorted(annotationCategoriesDict)
+    # ops = sorted(annotationCategoriesDict)
+    ops = [MyOption(cate, checked=cate in previousSelectedCategories) for cate in sortedData]
 
-    # Select form
     selectCateName = forms.SelectFromList.show(
         {'Annotation Categories': ops},
-        title='MultiGroup List',
+        title='Select Categories',
         group_selector_title='Select Categories',
         multiselect=True
     )
 
+    config.selected_category = ToList(selectCateName)
+    script.save_config()
+
     if not selectCateName:
-        Alert('No Category Selected. Please Select Again', exit=True)
+        sys.exit()
 
-
+    processCateTag = ProcessCategoryTag(selectCateName)
 
     allTagOfCategoryInView = AllElementOfCategoryInView(view, selectCateName)
-    taggedElement = Flatten_lv3([GetTaggedElement(tag) for tag in allTagOfCategoryInView]) #List 2
+    taggedElement = Flatten_lv3([GetTaggedElement(tag) for tag in allTagOfCategoryInView])  # List 2
 
     cateNameOfTaggedElement = sorted(list(set([ele.Category.Name for ele in taggedElement])))
-    allModelElement = AllElementOfCategoryInView(view,cateNameOfTaggedElement) #List 1
+    allModelElement = AllElementOfCategoryInView(view, cateNameOfTaggedElement)  # List 1
+
+    allEle = AllElementOfCategoryInView(view, selectCateName)
 
     """----------------------Compare and find elements have not been tagged----------------------------"""
 
     taggedElementId = [element.Id for element in taggedElement]
     modelElementId = [element.Id for element in allModelElement]
 
-    print(cateNameOfTaggedElement)
+    notTaggedElementId = SetDifference(modelElementId, taggedElementId)
+    notTaggedCategoryName = [doc.GetElement(id).Category.Name for id in notTaggedElementId]
+
+    groupElementByCategory = GroupByKey(notTaggedElementId, notTaggedCategoryName)
+    notTaggedElementGroup = groupElementByCategory[0]  # Get elements have been grouped
+    notTaggedCategoryGroup = groupElementByCategory[1]
+
+    taggedCategory = list(set(cateNameOfTaggedElement) - set(notTaggedCategoryGroup))
+
+    try:
+
+        if allTagOfCategoryInView == 0:
+            Alert('All Elements Have Not Been Tagged.', exit=True)
+        elif len(notTaggedCategoryGroup) > 0:
+            notTaggedCategory = [GetElementCategory(doc.GetElement(Id)) for Id in notTaggedElementId]
+            notTaggedFamilyRaw = [GetFamilyNameOfElement(doc.GetElement(Id)) for Id in notTaggedElementId]
+            notTaggedTypeRaw = [GetTypeNameOfElement(doc.GetElement(Id)) for Id in notTaggedElementId]
+            notTaggedIdRaw = [Id.IntegerValue for Id in notTaggedElementId]
+
+            groupFamily = GroupByKey(notTaggedFamilyRaw, notTaggedCategory)
+            notTaggedFamily = groupFamily[0]
+
+            groupType = GroupByKey(notTaggedTypeRaw, notTaggedCategory)
+            notTaggedType = groupType[0]
+
+            groupId = GroupByKey(notTaggedIdRaw, notTaggedCategory)
+            notTaggedId = groupId[0]
+
+            data = [[list(zip(family, typeName, ids))] if len(family) == 1 else [[(fam, typ, Id)] for fam, typ, Id in
+                                                                                 zip(family, typeName, ids)] for
+                    family, typeName, ids in zip(notTaggedFamily, notTaggedType, notTaggedId)]
+
+        if len(taggedCategory) != 0:
+            result = ", ".join(map(str, taggedCategory))
+            print('All Elements Of  {} Have Been Tagged.'.format(result))
+
+        if processCateTag:
+            raw = ""
+            for bool, cate in zip(processCateTag, selectCateName):
+                if bool == False:
+                    if raw == "":
+                        raw += cate
+                    else:
+                        raw += ", " + cate
+            if raw == "":
+                pass
+            else:
+                print('Can not find any {} in view.'.format(raw))
+
+    except Exception as exx:
+        TaskDialog.Show("Failed", "Warning: {}".format(exx))  # Corrected string formatting
+
+    ExportToExcel(notTaggedCategoryGroup, 1, 1, data)
+
     print(50 * "-")
-    print(allModelElement)
+    print(selectCateName)
+    print(50 * "-")
+    print(processCateTag)
+
+
+
 
 
 

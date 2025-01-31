@@ -1,49 +1,73 @@
-import json
+# -*- coding: utf-8 -*-
+
+# import clr
+# import System
+#
+# clr.AddReference('Microsoft.Office.Interop.Excel')
+# from Microsoft.Office.Interop import Excel
+#
+# def open_new_excel():
+#     # Tạo một ứng dụng Excel mới
+#     excel_app = Excel.ApplicationClass()
+#     excel_app.Visible = True  # Hiển thị Excel
+#
+#     # Tạo một workbook mới
+#     workbook = excel_app.Workbooks.Add()
+#
+#     # Chọn sheet đầu tiên
+#     worksheet = workbook.Worksheets[1]
+#
+#     # Ghi giá trị vào ô A1
+#     worksheet.Range["A1"].Value2 = "Hello, PyRevit!"
+#
+#     # Không đóng workbook để người dùng có thể sử dụng
+#     # workbook.Close(False)
+#
+#     # Không cần gọi excel_app.Quit() vì ta đang mở một file mới
+#
+# # Gọi hàm để khởi tạo Excel
+# open_new_excel()
+
+
+import clr
+import System
+
+clr.AddReference('Microsoft.Office.Interop.Excel')
+from Microsoft.Office.Interop import Excel
 from pyrevit import forms
 
-# Đường dẫn tới file lưu trữ lựa chọn
-options_file = 'selected_options.json'
+def save_excel_file():
+    # Chọn đường dẫn lưu file trước
+    filepath = forms.save_file(
+        file_ext='xlsx',
+        title='Chọn nơi lưu file Excel',
+        default_name='NewExcelFile.xlsx'
+    )
+
+    if not filepath:
+        print("Không có đường dẫn được chọn. Hủy thao tác.")
+        return
+
+    # Tạo một ứng dụng Excel mới
+    excel_app = Excel.ApplicationClass()
+    excel_app.Visible = True  # Hiển thị Excel
+
+    # Tạo một workbook mới
+    workbook = excel_app.Workbooks.Add()
+    worksheet = workbook.Worksheets[1]
+
+    # Ghi giá trị vào ô A1
+    worksheet.Range["A1"].Value2 = "Hello, PyRevit!"
+
+    # Lưu workbook vào đường dẫn đã chọn
+    workbook.SaveAs(filepath)
 
 
-# Định nghĩa lớp MyOption để tạo các tùy chọn
-class MyOption(forms.TemplateListItem):
-    @property
-    def name(self):
-        return "Option: {}".format(self.item)
 
+    # Không đóng workbook để người dùng có thể tiếp tục chỉnh sửa
+    # workbook.Close(False)
+    # excel_app.Quit()
 
-# Đọc các lựa chọn đã chọn trước đó từ file
-def load_selected_options():
-    try:
-        with open(options_file, 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return []
+# Gọi hàm để chọn đường dẫn và lưu Excel
+save_excel_file()
 
-
-# Lưu các lựa chọn vào file
-def save_selected_options(selected):
-    with open(options_file, 'w') as f:
-        json.dump(selected, f)
-
-
-# Lấy danh sách các tùy chọn và đánh dấu các tùy chọn đã chọn
-ops = [MyOption('op1'), MyOption('op2'), MyOption('op3')]
-
-# Đọc các tùy chọn đã chọn từ file (nếu có)
-selected_options = load_selected_options()
-for option in ops:
-    if option.item in selected_options:
-        option.checked = True
-
-# Hiển thị hộp thoại chọn từ danh sách
-res = forms.SelectFromList.show(ops,
-                                multiselect=True,
-                                button_name='Select Item')
-
-# Nếu người dùng chọn, lưu lại lựa chọn
-if res:
-    save_selected_options([item.item for item in res])
-
-# In kết quả lựa chọn
-print('Selected items: {}'.format(res))
