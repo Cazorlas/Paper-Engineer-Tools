@@ -24,7 +24,7 @@ from System.Collections.Generic import *
 from pyrevit import forms, revit, script, EXEC_PARAMS
 
 from rpw.ui.forms import *
-import json
+from MainForm import MainForm
 
 clr.AddReference('ProtoGeometry')  # Dynamo's geometry proxy
 from Autodesk.DesignScript.Geometry import *  # Import everything from Dynamo's geometry
@@ -209,7 +209,7 @@ def ExportToExcel(sheet_titles, start_row, start_column, data):
         sheet_titles (list): Danh sách tên các sheet.
         start_row (int): Dòng bắt đầu ghi dữ liệu.
         start_column (int): Cột bắt đầu ghi dữ liệu.
-        data (list): Danh sách dữ liệu cấp 3 (sheet), cấp 2 (row).
+        data (list): Danh sách dữ liệu cấp 3.
     """
     transposeData = Transpose(data)
 
@@ -227,22 +227,24 @@ def ExportToExcel(sheet_titles, start_row, start_column, data):
     # Tạo ứng dụng Excel
     excel_app = Excel.ApplicationClass()
     excel_app.Visible = True  # Hiển thị Excel
+    # excel_app.DisplayAlerts = False  # Tắt cảnh báo
 
     # Tạo workbook mới
     workbook = excel_app.Workbooks.Add()
 
     # Kiểm tra danh sách sheet và dữ liệu có khớp không
     if len(sheet_titles) != len(data):
-        print("Lỗi: Số lượng sheet không khớp với số lượng data.")
+        Alert("Lỗi: Số lượng sheet không khớp với số lượng data.")
         return
 
     # Xóa các sheet mặc định nếu có
     while workbook.Sheets.Count > 1:
         workbook.Sheets(1).Delete()
 
-    print("So luong sheet duoc tao:", len(sheet_titles))
-    print("Data Input:")
+    # print("So luong sheet duoc tao:", len(sheet_titles))
+    # print("Data Input:")
     for i, d in enumerate(transposeData):
+        print(50*"-")
         print("Sheet {}: {}".format(sheet_titles[i], d))
 
     # Duyệt qua từng sheet
@@ -279,6 +281,14 @@ def ExportToExcel(sheet_titles, start_row, start_column, data):
     # Lưu workbook
     workbook.SaveAs(file_path)
 
+    # Đóng workbook và Excel để giải phóng bộ nhớ
+    # workbook.Close(SaveChanges=False)
+    # excel_app.Quit()
+
+     # Giải phóng bộ nhớ
+    # del workbook
+    # del excel_app
+
     # # Hiển thị thông báo hoàn thành
     # forms.alert(
     #     message="Dữ liệu đã được xuất thành công!",
@@ -290,7 +300,6 @@ def ExportToExcel(sheet_titles, start_row, start_column, data):
 
 
 try:
-
     # Lấy config
     config = script.get_config(EXEC_PARAMS.command_name)
     previousSelectedCategories = config.get_option('selected_category', False)
@@ -364,32 +373,40 @@ try:
                                                                                  zip(family, typeName, ids)] for
                     family, typeName, ids in zip(notTaggedFamily, notTaggedType, notTaggedId)]
 
+            """-----------RUN FORM-----------"""
+            f = MainForm(notTaggedCategory, notTaggedFamilyRaw, notTaggedTypeRaw, notTaggedIdRaw, processCateTag,
+                         selectCateName,notTaggedCategoryGroup,data)
+            # f.LoadData(notTaggedCategory, notTaggedFamilyRaw, notTaggedTypeRaw, notTaggedIdRaw)
+            f.Show()
+
+            # ExportToExcel(notTaggedCategoryGroup, 1, 1, data)
+
         if len(taggedCategory) != 0:
             result = ", ".join(map(str, taggedCategory))
             print('All Elements Of  {} Have Been Tagged.'.format(result))
 
-        if processCateTag:
-            raw = ""
-            for bool, cate in zip(processCateTag, selectCateName):
-                if bool == False:
-                    if raw == "":
-                        raw += cate
-                    else:
-                        raw += ", " + cate
-            if raw == "":
-                pass
-            else:
-                print('Can not find any {} in view.'.format(raw))
+        # if processCateTag:
+        #     raw = ""
+        #     for bool, cate in zip(processCateTag, selectCateName):
+        #         if bool == False:
+        #             if raw == "":
+        #                 raw += cate
+        #             else:
+        #                 raw += ", " + cate
+        #     if raw == "":
+        #         pass
+        #     else:
+        #         print('Can not find any {} in view.'.format(raw))
+
 
     except Exception as exx:
         TaskDialog.Show("Failed", "Warning: {}".format(exx))  # Corrected string formatting
 
-    ExportToExcel(notTaggedCategoryGroup, 1, 1, data)
 
-    print(50 * "-")
-    print(selectCateName)
-    print(50 * "-")
-    print(processCateTag)
+
+
+
+
 
 
 
