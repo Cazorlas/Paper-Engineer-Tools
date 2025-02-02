@@ -49,6 +49,8 @@ from System.Collections.Generic import List
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 uidoc = __revit__.ActiveUIDocument
+uiviews = uidoc.GetOpenUIViews()
+uiview = [x for x in uiviews if x.ViewId == view.Id][0]
 """-------------------------------------------------------------------------------------------"""
 
 
@@ -230,6 +232,7 @@ class MainForm(Form):
         self._dataGridView1.Size = System.Drawing.Size(441, 450)
         self._dataGridView1.TabIndex = 1
         self._dataGridView1.Margin = System.Windows.Forms.Padding(5)
+        self._dataGridView1.CellContentClick += self.DataGridView1CellContentClick  # Bind click event
         #
         # Column1
         #
@@ -430,7 +433,7 @@ class MainForm(Form):
         )
 
         if not file_path:
-            print("Không có đường dẫn được chọn. Hủy thao tác.")
+            Alert("No Input File Path. Cancel")
             return
 
         # Tạo ứng dụng Excel
@@ -443,7 +446,7 @@ class MainForm(Form):
 
         # Kiểm tra số lượng sheet có khớp với dữ liệu không
         if len(self.sheetsTitle) != len(transposeData):
-            Alert("Lỗi: Số lượng sheet không khớp với số lượng dữ liệu!", exit=True)
+            Alert("Data not match")
             return
 
         # Xóa các sheet mặc định
@@ -491,7 +494,7 @@ class MainForm(Form):
         del workbook
         del excel_app
 
-        Alert("Xuất dữ liệu thành công!")
+        Alert("Export Done, Please Check!")
 
     def NoTagBtnClick(self, sender, e):
 
@@ -513,6 +516,43 @@ class MainForm(Form):
     def PictureBoxClick(self, sender, e):
         imagePath = os.path.join(__commandpath__, "image.jpg")
         os.startfile(imagePath)
+
+
+    def DataGridView1CellContentClick(self, sender, e):
+        """Handles button clicks in the Find column."""
+        if sender.Columns[e.ColumnIndex].HeaderText == "Find":  # Kiểm tra đúng cột "Find"
+            selectedRow = sender.Rows[e.RowIndex]
+            try:
+                elementId = int(selectedRow.Cells[4].Value)  # Lấy giá trị từ cột ID
+                element = doc.GetElement(ElementId(elementId))  # Lấy element từ Revit
+
+                if element:
+                    if isinstance(element, RevitLinkInstance):
+                        # Nếu là Revit Link, cần lấy document liên kết
+                        linkDoc = element.GetLinkDocument()
+                        transform = element.GetTransform()
+                        linkElementId = ElementId(int(selectedRow.Cells[1].Value))
+                        linkElement = linkDoc.GetElement(linkElementId)
+
+                        if linkElement and hasattr(linkElement, "get_BoundingBox"):
+                            bbox = linkElement.get_BoundingBox(None)
+                            if bbox:
+                                # Biến đổi bounding box theo transform của link
+                                pt1 = transform.OfPoint(bbox.Min)
+                                pt2 = transform.OfPoint(bbox.Max)
+                                uiview.ZoomAndCenterRectangle(pt1, pt2)
+                    elif hasattr(element, "get_BoundingBox"):
+                        # Nếu là element bình thường
+                        bbox = element.get_BoundingBox(None)
+                        if bbox:
+                            pt1 = bbox.Min
+                            pt2 = bbox.Max
+                            uiview.ZoomAndCenterRectangle(pt1, pt2)
+                else:
+                    Alert("No found Elenent in Revit")
+            except Exception as ex:
+                Alert("Error: {}".format(str(ex)))
+
 
     def CloseBtnClick(self, sender, e):
         self.Close()
