@@ -321,7 +321,7 @@ try:
     )
 
     if not selectCateName:
-        sys.exit()
+        Alert('No choose any category.', exit=True)
     else:
 
         config.selected_category = ToList(selectCateName)
@@ -354,8 +354,7 @@ try:
         taggedCategory = list(set(cateNameOfTaggedElement) - set(notTaggedCategoryGroup))
 
         try:
-
-            if allTagOfCategoryInView == 0:
+            if len(allTagOfCategoryInView) == 0:
                 Alert('All Elements Have Not Been Tagged.', exit=True)
             elif len(notTaggedCategoryGroup) > 0:
                 notTaggedCategory = [GetElementCategory(doc.GetElement(Id)) for Id in notTaggedElementId]

@@ -556,3 +556,6 @@ class MainForm(Form):
 
     def CloseBtnClick(self, sender, e):
         self.Close()
+
+    # def Show(self):
+    #     self.Show()
