@@ -285,6 +285,7 @@ class MainForm(Form):
         self._toolStrip1.Padding = System.Windows.Forms.Padding(5)
 
         self._toolStrip1.AutoSize = True
+         # Dropdown lọc theo Category
         self._categoryFilterDropdown = System.Windows.Forms.ToolStripDropDownButton("Category Filter")
         self._allCategoryItem = System.Windows.Forms.ToolStripMenuItem("All", CheckOnClick=True)
         self._allCategoryItem.Checked = True
