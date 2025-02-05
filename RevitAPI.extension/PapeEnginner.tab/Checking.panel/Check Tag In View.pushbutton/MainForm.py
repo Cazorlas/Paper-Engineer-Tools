@@ -70,6 +70,8 @@ class MainForm(Form):
         self.InitializeComponent()
         self.LoadData()
         self.LoadCategoryFilterItems()
+        self.LoadFamilyFilterItems()
+
 
     def InitializeComponent(self):
         # Get the directory of the running script
@@ -285,13 +287,23 @@ class MainForm(Form):
         self._toolStrip1.Padding = System.Windows.Forms.Padding(5)
 
         self._toolStrip1.AutoSize = True
-         # Dropdown lọc theo Category
+        self._toolStrip1.Dock = System.Windows.Forms.DockStyle.Top
+        # Dropdown lọc theo Category
         self._categoryFilterDropdown = System.Windows.Forms.ToolStripDropDownButton("Category Filter")
         self._allCategoryItem = System.Windows.Forms.ToolStripMenuItem("All", CheckOnClick=True)
         self._allCategoryItem.Checked = True
         self._allCategoryItem.Click += self.CategoryFilterChanged
         self._categoryFilterDropdown.DropDownItems.Add(self._allCategoryItem)
         self._toolStrip1.Items.Add(self._categoryFilterDropdown)
+        # Dropdown lọc theo FamilyName
+        self._familyFilterDropdown = System.Windows.Forms.ToolStripDropDownButton("Family Name Filter")
+        self._allFamilyItem = System.Windows.Forms.ToolStripMenuItem("All", CheckOnClick=True)
+        self._allFamilyItem.Checked = True
+        self._allFamilyItem.Click += self.FamilyFilterChanged
+        self._familyFilterDropdown.DropDownItems.Add(self._allFamilyItem)
+        self._toolStrip1.Items.Add(self._familyFilterDropdown)
+
+        self.Load += self.OnLoad
 
         #
         # panel1
@@ -329,50 +341,116 @@ class MainForm(Form):
         self._splitContainer2.Panel2.Resize += self.AdjustButtonPositions
         self.ResumeLayout(False)
 
+    def OnLoad(self, sender, e):
+        self.LoadCategoryFilterItems()
+        self.LoadFamilyFilterItems()
+
+
+    # def LoadData(self):
+    #     """ Nạp dữ liệu vào DataGridView """
+    #     self._dataGridView1.Rows.Clear()
+    #     for category, family, type_name, element_id in zip(self.category, self.familyName, self.typeName, self.Id):
+    #         self._dataGridView1.Rows.Add(False, category, family, type_name, element_id, "Find")
+    #
+    #     # Chỉ cập nhật danh sách filter nếu có thay đổi
+    #     self.LoadCategoryFilterItems()
+
+    # def LoadCategoryFilterItems(self):
+    #     """ Thêm các giá trị Category vào dropdown filter """
+    #     existing_categories = sorted(set(self.category))  # Lấy danh sách category duy nhất
+    #
+    #     # Kiểm tra nếu danh sách không thay đổi thì không cập nhật để tránh nhấp nháy UI
+    #     current_items = [item.Text for item in self._categoryFilterDropdown.DropDownItems if
+    #                      isinstance(item, ToolStripMenuItem)]
+    #     if current_items == ["All"] + existing_categories:
+    #         return  # Không cập nhật nếu danh sách không thay đổi
+    #
+    #     # Xóa các mục cũ trừ "All"
+    #     for i in range(len(self._categoryFilterDropdown.DropDownItems) - 1, 0, -1):
+    #         self._categoryFilterDropdown.DropDownItems.RemoveAt(i)
+    #
+    #     # Thêm các giá trị từ dữ liệu
+    #     for cat in existing_categories:
+    #         item = System.Windows.Forms.ToolStripMenuItem(cat, CheckOnClick=True)
+    #         item.Checked = True  # Mặc định bật hết
+    #         item.Click += self.CategoryFilterChanged
+    #         self._categoryFilterDropdown.DropDownItems.Add(item)
+    #
+    # def CategoryFilterChanged(self, sender, e):
+    #     """ Lọc dữ liệu khi thay đổi lựa chọn trong dropdown """
+    #     selected_categories = [item.Text for item in self._categoryFilterDropdown.DropDownItems
+    #                            if isinstance(item, System.Windows.Forms.ToolStripMenuItem) and item.Checked]
+    #
+    #     if "All" in selected_categories or not selected_categories:
+    #         # Nếu "All" được chọn hoặc không chọn gì => hiển thị tất cả
+    #         for row in self._dataGridView1.Rows:
+    #             row.Visible = True
+    #     else:
+    #         # Ẩn/hiển thị hàng dựa trên giá trị category
+    #         for row in self._dataGridView1.Rows:
+    #             category_value = str(row.Cells[1].Value)
+    #             row.Visible = category_value in selected_categories
+
     def LoadData(self):
-        """ Nạp dữ liệu vào DataGridView """
         self._dataGridView1.Rows.Clear()
         for category, family, type_name, element_id in zip(self.category, self.familyName, self.typeName, self.Id):
             self._dataGridView1.Rows.Add(False, category, family, type_name, element_id, "Find")
+        self.ApplyFilters()  # Áp dụng bộ lọc ngay khi load dữ liệu
 
-        # Chỉ cập nhật danh sách filter nếu có thay đổi
-        self.LoadCategoryFilterItems()
 
     def LoadCategoryFilterItems(self):
-        """ Thêm các giá trị Category vào dropdown filter """
-        existing_categories = sorted(set(self.category))  # Lấy danh sách category duy nhất
-
-        # Kiểm tra nếu danh sách không thay đổi thì không cập nhật để tránh nhấp nháy UI
+        existing_categories = sorted(set(self.category))
         current_items = [item.Text for item in self._categoryFilterDropdown.DropDownItems if
                          isinstance(item, ToolStripMenuItem)]
         if current_items == ["All"] + existing_categories:
-            return  # Không cập nhật nếu danh sách không thay đổi
-
-        # Xóa các mục cũ trừ "All"
+            return
         for i in range(len(self._categoryFilterDropdown.DropDownItems) - 1, 0, -1):
             self._categoryFilterDropdown.DropDownItems.RemoveAt(i)
-
-        # Thêm các giá trị từ dữ liệu
         for cat in existing_categories:
             item = System.Windows.Forms.ToolStripMenuItem(cat, CheckOnClick=True)
-            item.Checked = True  # Mặc định bật hết
+            item.Checked = True
             item.Click += self.CategoryFilterChanged
             self._categoryFilterDropdown.DropDownItems.Add(item)
 
-    def CategoryFilterChanged(self, sender, e):
-        """ Lọc dữ liệu khi thay đổi lựa chọn trong dropdown """
-        selected_categories = [item.Text for item in self._categoryFilterDropdown.DropDownItems
-                               if isinstance(item, System.Windows.Forms.ToolStripMenuItem) and item.Checked]
+    def LoadFamilyFilterItems(self):
+        existing_families = sorted(set(self.familyName))
+        current_items = [item.Text for item in self._familyFilterDropdown.DropDownItems if
+                         isinstance(item, ToolStripMenuItem)]
+        if current_items == ["All"] + existing_families:
+            return
+        for i in range(len(self._familyFilterDropdown.DropDownItems) - 1, 0, -1):
+            self._familyFilterDropdown.DropDownItems.RemoveAt(i)
+        for fam in existing_families:
+            item = System.Windows.Forms.ToolStripMenuItem(fam, CheckOnClick=True)
+            item.Checked = True
+            item.Click += self.FamilyFilterChanged
+            self._familyFilterDropdown.DropDownItems.Add(item)
 
-        if "All" in selected_categories or not selected_categories:
-            # Nếu "All" được chọn hoặc không chọn gì => hiển thị tất cả
-            for row in self._dataGridView1.Rows:
-                row.Visible = True
-        else:
-            # Ẩn/hiển thị hàng dựa trên giá trị category
-            for row in self._dataGridView1.Rows:
-                category_value = str(row.Cells[1].Value)
-                row.Visible = category_value in selected_categories
+    def CategoryFilterChanged(self, sender, e):
+        if sender.Text == "All":
+            for item in self._categoryFilterDropdown.DropDownItems:
+                if isinstance(item, System.Windows.Forms.ToolStripMenuItem):
+                    item.Checked = sender.Checked
+        self.ApplyFilters()
+
+    def FamilyFilterChanged(self, sender, e):
+        if sender.Text == "All":
+            for item in self._familyFilterDropdown.DropDownItems:
+                if isinstance(item, System.Windows.Forms.ToolStripMenuItem):
+                    item.Checked = sender.Checked
+        self.ApplyFilters()
+
+
+    def ApplyFilters(self):
+        selected_categories = [item.Text for item in self._categoryFilterDropdown.DropDownItems if
+                               isinstance(item, System.Windows.Forms.ToolStripMenuItem) and item.Checked]
+        selected_families = [item.Text for item in self._familyFilterDropdown.DropDownItems if
+                             isinstance(item, System.Windows.Forms.ToolStripMenuItem) and item.Checked]
+        for row in self._dataGridView1.Rows:
+            category_value = str(row.Cells[1].Value)
+            family_value = str(row.Cells[2].Value)
+            row.Visible = (category_value in selected_categories or "All" in selected_categories) and (
+                        family_value in selected_families or "All" in selected_families)
 
     def AdjustButtonPositions(self, sender=None, e=None):
         """ Cập nhật vị trí các nút khi thay đổi kích thước """
@@ -508,7 +586,7 @@ class MainForm(Form):
                     else:
                         raw += ", " + cate
             if raw == "":
-                pass
+                Alert("Nothing to export")
             else:
                 Alert('Can not find any {} in view.'.format(raw))
         else:
@@ -517,7 +595,6 @@ class MainForm(Form):
     def PictureBoxClick(self, sender, e):
         imagePath = os.path.join(__commandpath__, "image.jpg")
         os.startfile(imagePath)
-
 
     def DataGridView1CellContentClick(self, sender, e):
         """Handles button clicks in the Find column."""
@@ -553,7 +630,6 @@ class MainForm(Form):
                     Alert("No found Elenent in Revit")
             except Exception as ex:
                 Alert("Error: {}".format(str(ex)))
-
 
     def CloseBtnClick(self, sender, e):
         self.Close()
