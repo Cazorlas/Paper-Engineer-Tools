@@ -72,7 +72,6 @@ class MainForm(Form):
         self.LoadCategoryFilterItems()
         self.LoadFamilyFilterItems()
 
-
     def InitializeComponent(self):
         # Get the directory of the running script
         script_dir = os.path.dirname(__file__)
@@ -303,8 +302,8 @@ class MainForm(Form):
         self._familyFilterDropdown.DropDownItems.Add(self._allFamilyItem)
         self._toolStrip1.Items.Add(self._familyFilterDropdown)
 
-        self.Load += self.OnLoad
-
+        self.LoadCategoryFilterItems()
+        self.LoadFamilyFilterItems()
         #
         # panel1
         #
@@ -341,10 +340,9 @@ class MainForm(Form):
         self._splitContainer2.Panel2.Resize += self.AdjustButtonPositions
         self.ResumeLayout(False)
 
-    def OnLoad(self, sender, e):
-        self.LoadCategoryFilterItems()
-        self.LoadFamilyFilterItems()
-
+    # def OnLoad(self, sender, e):
+    #     self.LoadCategoryFilterItems()
+    #     self.LoadFamilyFilterItems()
 
     # def LoadData(self):
     #     """ Nạp dữ liệu vào DataGridView """
@@ -397,7 +395,6 @@ class MainForm(Form):
             self._dataGridView1.Rows.Add(False, category, family, type_name, element_id, "Find")
         self.ApplyFilters()  # Áp dụng bộ lọc ngay khi load dữ liệu
 
-
     def LoadCategoryFilterItems(self):
         existing_categories = sorted(set(self.category))
         current_items = [item.Text for item in self._categoryFilterDropdown.DropDownItems if
@@ -440,7 +437,6 @@ class MainForm(Form):
                     item.Checked = sender.Checked
         self.ApplyFilters()
 
-
     def ApplyFilters(self):
         selected_categories = [item.Text for item in self._categoryFilterDropdown.DropDownItems if
                                isinstance(item, System.Windows.Forms.ToolStripMenuItem) and item.Checked]
@@ -450,7 +446,7 @@ class MainForm(Form):
             category_value = str(row.Cells[1].Value)
             family_value = str(row.Cells[2].Value)
             row.Visible = (category_value in selected_categories or "All" in selected_categories) and (
-                        family_value in selected_families or "All" in selected_families)
+                    family_value in selected_families or "All" in selected_families)
 
     def AdjustButtonPositions(self, sender=None, e=None):
         """ Cập nhật vị trí các nút khi thay đổi kích thước """
