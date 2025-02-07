@@ -179,8 +179,9 @@ def GetWalls(refLinkInstance):
         # Lọc tường chỉ lấy Basic Wall và Stacked Wall
         for wall in walls:
             wallType = doc.GetElement(wall.GetTypeId())  # Lấy loại tường
-            if wallType.Kind in [WallKind.Basic, WallKind.Stacked]:  # Kiểm tra loại tường
-                lstwalls.append(wall)
+            if hasattr(wallType, "Kind"):
+                if wallType.Kind in [WallKind.Basic, WallKind.Stacked]:  # Kiểm tra loại tường
+                    lstwalls.append(wall)
 
     else:
 
@@ -196,8 +197,9 @@ def GetWalls(refLinkInstance):
         # Lọc tường chỉ lấy Basic Wall và Stacked Wall
         for wall in walls:
             wallType = linkedDoc.GetElement(wall.GetTypeId())  # Lấy loại tường
-            if wallType.Kind in [WallKind.Basic, WallKind.Stacked]:  # Kiểm tra loại tường
-                lstwalls.append(wall)
+            if hasattr(wallType, "Kind"):
+                if wallType.Kind in [WallKind.Basic, WallKind.Stacked]:  # Kiểm tra loại tường
+                    lstwalls.append(wall)
 
     return lstwalls
 
