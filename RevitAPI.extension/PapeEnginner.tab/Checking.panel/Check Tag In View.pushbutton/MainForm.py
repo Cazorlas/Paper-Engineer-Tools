@@ -74,9 +74,9 @@ class MainForm(Form):
 
     def InitializeComponent(self):
         # Get the directory of the running script
-        script_dir = os.path.dirname(__file__)
-        image_path = os.path.join(script_dir, "image.jpg")
-        icon_path = os.path.join(script_dir, "icon.ico")
+        # script_dir = os.path.dirname(__file__)
+        image_path = os.path.join(__commandpath__, "image.jpg")
+        icon_path = os.path.join(__commandpath__, "icon.ico")
         # Load custom icon (if available)
         if os.path.exists(icon_path):
             self.Icon = Icon(icon_path)
