@@ -61,6 +61,7 @@ class InputForm(Form):
         self.data = data
         self.allChecked = False  # Trạng thái chọn tất cả
         self.HiddenState = False  # Trạng thái ẩn
+        self.HiddenItems = []  # Danh sách chứa các mục bị ẩn
         self.ListViewItems = []  # Danh sách chứa các mục ban đầu
 
         self.InitializeComponent()
@@ -191,11 +192,10 @@ class InputForm(Form):
         # Đăng ký sự kiện Resize để cột luôn chiếm toàn bộ chiều rộng của ListView
         self._listView1.Resize += self.ListViewResize
 
-        for item in self.data:
-            # self._listView1.Items.Add(ListViewItem(str(item)))
-            listItem = ListViewItem(str(item))
-            self.ListView1.Items.Add(listItem)
-            self.ListViewItems.append(listItem)
+        for idx,item in enumerate(self.data):
+            listItem = System.Windows.Forms.ListViewItem(str(item))
+            self._listView1.Items.Add(listItem)
+            self.ListViewItems.append((idx, listItem))
 
         self._listView1.SelectedIndexChanged += self.ListView1SelectedIndexChanged
         #
@@ -314,7 +314,29 @@ class InputForm(Form):
         pass
 
     def TextBoxFindTextChanged(self, sender, e):
-        pass
+        # Lấy chuỗi tìm kiếm từ ô textbox, chuyển về chữ thường để so sánh không phân biệt chữ hoa/chữ thường
+        searchStr = self._textBoxFind.Text.lower().strip()
+
+        # Tạm dừng cập nhật giao diện để tránh nháy màn hình khi thay đổi danh sách mục
+        self._listView1.BeginUpdate()
+        # Xoá hết các mục đang hiển thị
+        self._listView1.Items.Clear()
+
+        if searchStr == "":
+            # Nếu không có chuỗi tìm kiếm (ô trống), khôi phục lại toàn bộ ListView theo thứ tự ban đầu
+            for idx, item in sorted(self.ListViewItems, key=lambda x: x[0]):
+                self._listView1.Items.Add(item)
+        else:
+            # Nếu có chuỗi tìm kiếm, lọc các mục có chứa chuỗi đó trong thuộc tính Text của ListViewItem
+            for idx, item in sorted(self.ListViewItems, key=lambda x: x[0]):
+                # Kiểm tra nếu chuỗi tìm kiếm xuất hiện trong text của item (chuyển về chữ thường để so sánh)
+                # if searchStr in item.Text.lower():
+                if item.Text.lower().startswith(searchStr):
+                    self._listView1.Items.Add(item)
+
+        # Cho phép ListView cập nhật giao diện sau khi thay đổi
+        self._listView1.EndUpdate()
+
 
     def ComboBox1SelectedIndexChanged(self, sender, e):
         pass
@@ -334,20 +356,29 @@ class InputForm(Form):
             item.Checked = not item.Checked
 
     def BtnHideClick(self, sender, e):
-        """Hide unchecked items and show them when clicked again."""
+        """Ẩn các mục chưa được check và hiện lại chúng theo thứ tự ban đầu."""
+        # Đảo ngược trạng thái ẩn/hiện
         self.HiddenState = not self.HiddenState
-        self.ListView1.BeginUpdate()
+        self._listView1.BeginUpdate()
 
         if self.HiddenState:
-            for item in self.ListViewItems:
-                if not item.Checked:
-                    self.ListView1.Items.Remove(item)
+            # Lấy ra các mục chưa được check (ẩn chúng)
+            self.HiddenItems = [(idx, item) for (idx, item) in self.ListViewItems
+                                if not item.Checked and item in self._listView1.Items]
+            # Loại bỏ từng mục khỏi ListView
+            for idx, item in self.HiddenItems:
+                self._listView1.Items.Remove(item)
         else:
-            self.ListView1.Items.Clear()
-            for item in self.ListViewItems:
-                self.ListView1.Items.Add(item)
+            # Khi mở trạng thái hiển thị: khôi phục lại toàn bộ ListView theo thứ tự ban đầu.
+            self._listView1.Items.Clear()
+            # Sắp xếp các mục theo index ban đầu rồi thêm lại vào ListView
+            for idx, item in sorted(self.ListViewItems, key=lambda x: x[0]):
+                self._listView1.Items.Add(item)
+            # Xóa danh sách các mục đã ẩn
+            self.HiddenItems = []
 
-        self.ListView1.EndUpdate()
+        self._listView1.EndUpdate()
+
 
     def BtnSaveClick(self, sender, e):
         pass
