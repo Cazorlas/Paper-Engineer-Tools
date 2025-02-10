@@ -316,8 +316,9 @@ class MainForm(Form):
         #
         # MainForm
         #
-        self.AcceptButton = self._closeBtn
+        # self.AcceptButton = self._closeBtn
         self.CancelButton = self._closeBtn
+        self.BackColor = System.Drawing.SystemColors.ControlLightLight
         self.ClientSize = System.Drawing.Size(561, 475)
         self.MinimumSize = self.Size  # Lấy kích thước hiện tại làm MinimumSize
         self.Controls.Add(self._splitContainer1)

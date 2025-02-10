@@ -57,9 +57,11 @@ lstSelect = ["Annotation Categories"]
 
 
 class InputForm(Form):
-    def __init__(self,data):
+    def __init__(self, data):
         self.data = data
-
+        self.allChecked = False  # Trạng thái chọn tất cả
+        self.HiddenState = False  # Trạng thái ẩn
+        self.ListViewItems = []  # Danh sách chứa các mục ban đầu
 
         self.InitializeComponent()
 
@@ -107,7 +109,7 @@ class InputForm(Form):
         # panel2
         #
         # self._panel2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle
-        self._panel2.Padding = System.Windows.Forms.Padding(8,0,8,0)
+        self._panel2.Padding = System.Windows.Forms.Padding(8, 0, 8, 0)
         self._panel2.Controls.Add(self._listView1)
         self._panel2.Dock = System.Windows.Forms.DockStyle.Fill
         self._panel2.Location = System.Drawing.Point(0, 82)
@@ -190,7 +192,10 @@ class InputForm(Form):
         self._listView1.Resize += self.ListViewResize
 
         for item in self.data:
-            self._listView1.Items.Add(ListViewItem(str(item)))
+            # self._listView1.Items.Add(ListViewItem(str(item)))
+            listItem = ListViewItem(str(item))
+            self.ListView1.Items.Add(listItem)
+            self.ListViewItems.append(listItem)
 
         self._listView1.SelectedIndexChanged += self.ListView1SelectedIndexChanged
         #
@@ -226,7 +231,7 @@ class InputForm(Form):
         self._btnHide.Name = "btnHide"
         self._btnHide.Size = System.Drawing.Size(158, 35)
         self._btnHide.TabIndex = 0
-        self._btnHide.Text = "Hide Unselected"
+        self._btnHide.Text = "Hide/Unhide Selected"
         self._btnHide.UseVisualStyleBackColor = True
         self._btnHide.Click += self.BtnHideClick
         #
@@ -318,13 +323,31 @@ class InputForm(Form):
         pass
 
     def BtnCheckUncheckClick(self, sender, e):
-        pass
+        """Check or uncheck all items in the ListView."""
+        self.allChecked = not self.allChecked
+        for item in self._listView1.Items:
+            item.Checked = self.allChecked
 
     def BtnToggleClick(self, sender, e):
-        pass
+        """Toggle checked state of each individual item."""
+        for item in self._listView1.Items:
+            item.Checked = not item.Checked
 
     def BtnHideClick(self, sender, e):
-        pass
+        """Hide unchecked items and show them when clicked again."""
+        self.HiddenState = not self.HiddenState
+        self.ListView1.BeginUpdate()
+
+        if self.HiddenState:
+            for item in self.ListViewItems:
+                if not item.Checked:
+                    self.ListView1.Items.Remove(item)
+        else:
+            self.ListView1.Items.Clear()
+            for item in self.ListViewItems:
+                self.ListView1.Items.Add(item)
+
+        self.ListView1.EndUpdate()
 
     def BtnSaveClick(self, sender, e):
         pass
