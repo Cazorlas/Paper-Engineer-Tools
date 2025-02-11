@@ -381,7 +381,13 @@ class InputForm(Form):
 
 
     def BtnSaveClick(self, sender, e):
-        pass
+        itemChecked = [item for item in self._listView1.Items if item.Checked]
+
+
+        # Alert("{}".format(itemChecked))
+
+
+        # self.DialogResult = System.Windows.Forms.DialogResult.OK
 
     def ListViewResize(self, sender, e):
         sender.Columns[0].Width = sender.ClientSize.Width
