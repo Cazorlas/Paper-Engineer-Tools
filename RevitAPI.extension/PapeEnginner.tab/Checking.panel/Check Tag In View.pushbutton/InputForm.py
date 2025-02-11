@@ -3,7 +3,7 @@ from mailbox import Message
 
 import clr
 import System
-import string
+import json
 from rpw.ui.forms import Alert
 
 # Importing necessary references for Revit and Windows Forms
@@ -379,6 +379,8 @@ class InputForm(Form):
 
         self._listView1.EndUpdate()
 
+    def ListViewResize(self, sender, e):
+        sender.Columns[0].Width = sender.ClientSize.Width
 
     def BtnSaveClick(self, sender, e):
         itemChecked = [item for item in self._listView1.Items if item.Checked]
@@ -389,5 +391,89 @@ class InputForm(Form):
 
         # self.DialogResult = System.Windows.Forms.DialogResult.OK
 
-    def ListViewResize(self, sender, e):
-        sender.Columns[0].Width = sender.ClientSize.Width
+
+
+
+    def BtnSaveClick(self, sender, e):
+        """Lưu danh sách các mục đã check vào Project Parameter trong Project Information."""
+        # Lấy danh sách các mục được check
+        checked_items = [item.Text for item in self._listView1.Items if item.Checked]
+
+        # Chuyển danh sách thành chuỗi JSON
+        json_data = json.dumps(checked_items)
+
+        # Lấy Project Information
+        project_info = self.GetProjectInformation()
+
+        # Tên parameter cần lưu
+        param_name = "Dynamo_Config"
+
+        # Kiểm tra nếu parameter đã tồn tại, nếu chưa thì tạo mới
+        if project_info.LookupParameter(param_name) is None:
+            self.AddProjectParameter(param_name)
+
+        # Ghi dữ liệu vào parameter
+        self.SetParameterValue(project_info, param_name, json_data)
+
+        Alert("Đã lưu danh sách vào Project Parameter!", title="Lưu Dữ Liệu")
+
+    def GetProjectInformation(self):
+        """Lấy Project Information Category."""
+        return self.doc.ProjectInformation
+
+    def AddProjectParameter(self, param_name):
+        """Thêm Project Parameter mới nếu chưa có."""
+        category_set = CategorySet()
+        category_set.Insert(self.doc.Settings.Categories.get_Item(BuiltInCategory.OST_ProjectInformation))
+
+        param_binding = self.doc.Application.Create.NewInstanceBinding(category_set)
+
+        # Tạo transaction để thêm parameter
+        with Transaction(self.doc, "Add Project Parameter") as t:
+            t.Start()
+
+            # Mở Shared Parameter File
+            shared_params_file = self.doc.Application.OpenSharedParameterFile()
+
+            if shared_params_file is None:
+                Alert("Không tìm thấy Shared Parameter File. Hãy thiết lập trước!", title="Lỗi")
+                t.RollBack()
+                return
+
+            # Kiểm tra nhóm parameter "DynamoSettings" có tồn tại không
+            param_group = next((g for g in shared_params_file.Groups if g.Name == "DynamoSettings"), None)
+            if param_group is None:
+                param_group = shared_params_file.Groups.Create("DynamoSettings")
+
+            # Tạo parameter mới
+            param_options = ExternalDefinitionCreationOptions(param_name, ParameterType.Text)
+            param_def = param_group.Definitions.Create(param_options)
+
+            # Thêm parameter vào Project Information
+            self.doc.ParameterBindings.Insert(param_def, param_binding, BuiltInParameterGroup.PG_TEXT)
+
+            t.Commit()
+
+    def SetParameterValue(self, element, param_name, value):
+        """Đặt giá trị cho Project Parameter."""
+        param = element.LookupParameter(param_name)
+        if param:
+            with Transaction(self.doc, "Set Project Parameter Value") as t:
+                t.Start()
+                param.Set(value)
+                t.Commit()
+
+    def LoadCheckedItems(self):
+        """Đọc danh sách từ Project Parameter."""
+        project_info = self.GetProjectInformation()
+        param_name = "Dynamo_Config"
+        param = project_info.LookupParameter(param_name)
+
+        if param and param.AsString():
+            try:
+                return json.loads(param.AsString())  # Chuyển JSON về list
+            except json.JSONDecodeError:
+                return []
+        return []
+
+
