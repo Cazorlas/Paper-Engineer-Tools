@@ -13,6 +13,8 @@ import sys
 # TODO: Import libraries and modules
 import clr  # Common Language Runtime for .NET
 import System
+import json
+import os
 import math  # Standard Python math library
 
 # Excel Libraary
@@ -307,8 +309,8 @@ if __name__ == "__main__":
         global formInputInstance
 
         # Lấy config
-        config = script.get_config(EXEC_PARAMS.command_name)
-        previousSelectedCategories = config.get_option('selected_category', False)
+        # config = script.get_config(EXEC_PARAMS.command_name)
+        # previousSelectedCategories = config.get_option('selected_category', False)
 
         annotationCategories = AllAnnotationCategories()
         annotationCategoriesName = [cate.Name for cate in annotationCategories]
@@ -320,14 +322,29 @@ if __name__ == "__main__":
         # ops = sorted(annotationCategoriesDict)
         # ops = [MyOption(cate, checked=cate in previousSelectedCategories) for cate in sortedData]
 
+        # Run Setting first
+        projectInfo = doc.ProjectInformation
+        param = projectInfo.LookupParameter("checkTagConfiguration")
+
+        if param is None:
+            Alert(content="Please run Setting First",title="Warning",exit=True)
+        else:
+            paramValue = param.AsValueString()
+            if not paramValue:
+                Alert(content="Please run Setting First",title="Warning",exit=True)
+            else:
+                formInputInstance = InputForm(sortedData)
+                data = json.loads(paramValue)
+                checkedItems = data.get('listViewItem', [])
 
 
-        # Đặt lệnh này NGAY SAU khi import System.Windows.Forms
-        Application.EnableVisualStyles()
 
-        # Sau đó mới tạo và chạy form
-        formInputInstance = InputForm(sortedData)
-        Application.Run(formInputInstance)
+        # # Đặt lệnh này NGAY SAU khi import System.Windows.Forms
+        # Application.EnableVisualStyles()
+        #
+        # # Sau đó mới tạo và chạy form
+        # formInputInstance = InputForm(sortedData)
+        # Application.Run(formInputInstance)
 
 
 
