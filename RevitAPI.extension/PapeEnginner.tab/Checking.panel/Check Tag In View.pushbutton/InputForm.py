@@ -3,7 +3,9 @@ from mailbox import Message
 
 import clr
 import System
+from System import Enum
 import json
+from pyrevit import *
 from rpw.ui.forms import Alert
 
 # Importing necessary references for Revit and Windows Forms
@@ -14,7 +16,7 @@ from RevitServices.Transactions import TransactionManager
 
 clr.AddReference("RevitNodes")
 import Revit
-from pyrevit import forms, revit, script, EXEC_PARAMS
+from pyrevit import *
 
 # Excel Libraary
 clr.AddReference('Microsoft.Office.Interop.Excel')
@@ -46,12 +48,29 @@ clr.AddReference('System')
 from System.Collections.Generic import List
 
 """---------------------------Get active document and view from Revit------------------------"""
-doc = __revit__.ActiveUIDocument.Document
+app = __revit__.Application
+# doc = __revit__.ActiveUIDocument.Document
+doc = revit.doc
 view = doc.ActiveView
 uidoc = __revit__.ActiveUIDocument
 uiviews = uidoc.GetOpenUIViews()
 uiview = [x for x in uiviews if x.ViewId == view.Id][0]
 """-------------------------------------------------------------------------------------------"""
+categoryNamesType = ["Air Terminals", "Analytical Links","Analytical Pipe Connections","Assemblies", "Audio Visual Devices","Cable Tray Fittings", "Cable Tray Runs", "Cable Trays", "Casework", "Ceilings", "Columns", "Communication Devices", "Conduit Fittings", "Conduit Runs", "Conduits", "Curtain Panels", "Curtain Systems", "Curtain Wall Mullions", "Data Devices", "Detail Items", "Doors", "Duct Accessories", "Duct Fittings", "Duct Insulations",
+ "Duct Linings", "Duct Placeholders", "Duct Systems", "Ducts", "Electrical Equipment", "Electrical Fixtures", "Entourage", "Fire Alarm Devices", "Fire Protection", "Flex Ducts", "Flex Pipes", "Floors", "Food Service Equipment", "Furniture", "Furniture Systems", "Generic Models", "Grids", "Hardscape", "Levels", "Lighting Devices", "Lighting Fixtures","Mass", "Mechanical Control Devices", "Mechanical Equipment", "Mechanical Equipment Sets", "Medical Equipment", "MEP Fabrication Containment", "MEP Fabrication Ductwork", "MEP Fabrication Hangers", "MEP Fabrication Pipework", "Model Groups", "Nurse Call Devices", "Parking",
+ "Pipe Accessories", "Pipe Fittings", "Pipe Insulations", "Pipe Placeholders", "Pipes", "Piping Systems", "Planting", "Plumbing Equipment", "Plumbing Fixtures", "RVT Links", "Railings", "Ramps", "Rebar Shape", "Roads", "Roofs", "Security Devices", "Signage", "Site", "Specialty Equipment", "Sprinklers", "Stairs", "Structural Area Reinforcement", "Structural Beam Systems", "Structural Columns", "Structural Connections", "Structural Fabric Areas", "Structural Fabric Reinforcement", "Structural Foundations", "Structural Framing", "Structural Path Reinforcement", "Structural Rebar", "Structural Rebar Couplers", "Structural Stiffeners", "Structural Trusses", "Telephone Devices", "Temporary Structures", "Topography", "Vertical Circulation", "Walls", "Windows", "Wires"]
+
+categoryNamesInstance = ["Air Systems", "Air Terminals", "Analytical Links", "Analytical Members", "Analytical Nodes", "Analytical Openings", "Analytical Panels", "Analytical Pipe Connections", "Analytical Spaces", "Analytical Surfaces", "Areas", "Assemblies", "Audio Visual Devices",
+ "Cable Tray Fittings", "Cable Tray Runs", "Cable Trays", "Casework", "Ceilings", "Columns", "Communication Devices", "Conduit Fittings", "Conduit Runs", "Conduits", "Curtain Panels", "Curtain Systems", "Curtain Wall Mullions", "Data Devices", "Detail Items", "Doors",
+ "Duct Accessories", "Duct Fittings", "Duct Insulations", "Duct Linings", "Duct Placeholders", "Duct Systems", "Ducts", "Electrical Analytical Bus", "Electrical Analytical Loads", "Electrical Analytical Power Source", "Electrical Analytical Transfer Switch",
+ "Electrical Analytical Transformer", "Electrical Circuits", "Electrical Equipment", "Electrical Fixtures", "Electrical Load Areas", "Entourage", "Fire Alarm Devices", "Fire Protection", "Flex Ducts", "Flex Pipes", "Floors", "Food Service Equipment", "Furniture", "Furniture Systems", "Generic Models", "Grids", "HVAC Zones", "Hardscape", "Levels", "Lighting Devices", "Lighting Fixtures", "MEP Fabrication Containment", "MEP Fabrication Ductwork", "MEP Fabrication Hangers", "MEP Fabrication Pipework", "Mass", "Materials", "Mechanical Control Devices", "Mechanical Equipment", "Mechanical Equipment Sets", "Medical Equipment", "Model Groups", "Nurse Call Devices", "Parking", "Parts", "Pipe Accessories", "Pipe Fittings", "Pipe Insulations", "Pipe Placeholders", "Pipes", "Piping Systems", "Planting", "Plumbing Equipment", "Plumbing Fixtures", "Project Information", "RVT Links", "Railings", "Ramps", "Rebar Shape", "Roads", "Roofs", "Rooms", "Schedules", "Security Devices", "Shaft Openings", "Sheets", "Signage", "Site", "Spaces", "Specialty Equipment", "Sprinklers", "Stairs", "Structural Area Reinforcement", "Structural Beam Systems", "Structural Columns", "Structural Connections", "Structural Fabric Areas", "Structural Fabric Reinforcement", "Structural Foundations", "Structural Framing", "Structural Path Reinforcement", "Structural Rebar", "Structural Rebar Couplers", "Structural Stiffeners", "Structural Trusses", "Switch System", "System-Zones", "Telephone Devices", "Temporary Structures", "Topography", "Vertical Circulation", "Views", "Walls", "Water Loops", "Windows", "Wires", "Zone Equipment"]
+
+builtInParameterGroup = ["Analysis Results", "Analytical Alignment", "Analytical Model", "Constraints", "Construction",
+"Data", "Dimensions", "Division Geometry", "Electrical", "Electrical - Circuiting", "Electrical - Lighting", "Electrical - Loads",
+"Electrical Analysis", "Fire Protection", "Forces", "General", "Graphics", "Green Building Properties", "Identity Data",
+"IFC Parameters", "Layers", "Life Safety", "Materials and Finishes", "Mechanical", "Mechanical Flow", "Mechanical Loads",
+"Model Properties", "Moments", "Other", "Overall Legend", "Phasing", "Photometrics", "Plumbing", "Primary End", "Rebar Set", "Releases / Member Forces",
+"Secondary End", "Segments and Fittings", "Set", "Slab Shape Edit", "Structural", "Structural Analysis", "Text", "Title Text", "Visibility"]
 
 lstSelect = ["Annotation Categories"]
 
@@ -384,6 +403,24 @@ class InputForm(Form):
 
     def BtnSaveClick(self, sender, e):
         itemChecked = [item for item in self._listView1.Items if item.Checked]
+        allCategory = [category for category in doc.Settings.Categories]
+        builtInParameterGroups = [group for group in System.Enum.GetValues(DB.BuiltInParameterGroup)]
+        builtInParameterGroupNames = [DB.LabelUtils.GetLabelFor(n) for n in builtInParameterGroups]
+
+        # Get the shared parameter file and its groups
+        sp_file = app.OpenSharedParameterFile()
+        # sp_groups = sp_file.Groups
+        # dict_pg = {g.Name:g for g in sp_groups}
+
+        print(sp_file)
+        print(50*"-")
+        # print(sp_groups)
+        # print(50*"-")
+        # print(dict_pg)
+
+
+
+
 
 
         # Alert("{}".format(itemChecked))
@@ -394,86 +431,87 @@ class InputForm(Form):
 
 
 
-    def BtnSaveClick(self, sender, e):
-        """Lưu danh sách các mục đã check vào Project Parameter trong Project Information."""
-        # Lấy danh sách các mục được check
-        checked_items = [item.Text for item in self._listView1.Items if item.Checked]
+    # def BtnSaveClick(self, sender, e):
+    #     """Lưu danh sách các mục đã check vào Project Parameter trong Project Information."""
+    #     # Lấy danh sách các mục được check
+    #     itemChecked = [item.Text for item in self._listView1.Items if item.Checked]
 
-        # Chuyển danh sách thành chuỗi JSON
-        json_data = json.dumps(checked_items)
 
-        # Lấy Project Information
-        project_info = self.GetProjectInformation()
-
-        # Tên parameter cần lưu
-        param_name = "Dynamo_Config"
-
-        # Kiểm tra nếu parameter đã tồn tại, nếu chưa thì tạo mới
-        if project_info.LookupParameter(param_name) is None:
-            self.AddProjectParameter(param_name)
-
-        # Ghi dữ liệu vào parameter
-        self.SetParameterValue(project_info, param_name, json_data)
-
-        Alert("Đã lưu danh sách vào Project Parameter!", title="Lưu Dữ Liệu")
-
-    def GetProjectInformation(self):
-        """Lấy Project Information Category."""
-        return self.doc.ProjectInformation
-
-    def AddProjectParameter(self, param_name):
-        """Thêm Project Parameter mới nếu chưa có."""
-        category_set = CategorySet()
-        category_set.Insert(self.doc.Settings.Categories.get_Item(BuiltInCategory.OST_ProjectInformation))
-
-        param_binding = self.doc.Application.Create.NewInstanceBinding(category_set)
-
-        # Tạo transaction để thêm parameter
-        with Transaction(self.doc, "Add Project Parameter") as t:
-            t.Start()
-
-            # Mở Shared Parameter File
-            shared_params_file = self.doc.Application.OpenSharedParameterFile()
-
-            if shared_params_file is None:
-                Alert("Không tìm thấy Shared Parameter File. Hãy thiết lập trước!", title="Lỗi")
-                t.RollBack()
-                return
-
-            # Kiểm tra nhóm parameter "DynamoSettings" có tồn tại không
-            param_group = next((g for g in shared_params_file.Groups if g.Name == "DynamoSettings"), None)
-            if param_group is None:
-                param_group = shared_params_file.Groups.Create("DynamoSettings")
-
-            # Tạo parameter mới
-            param_options = ExternalDefinitionCreationOptions(param_name, ParameterType.Text)
-            param_def = param_group.Definitions.Create(param_options)
-
-            # Thêm parameter vào Project Information
-            self.doc.ParameterBindings.Insert(param_def, param_binding, BuiltInParameterGroup.PG_TEXT)
-
-            t.Commit()
-
-    def SetParameterValue(self, element, param_name, value):
-        """Đặt giá trị cho Project Parameter."""
-        param = element.LookupParameter(param_name)
-        if param:
-            with Transaction(self.doc, "Set Project Parameter Value") as t:
-                t.Start()
-                param.Set(value)
-                t.Commit()
-
-    def LoadCheckedItems(self):
-        """Đọc danh sách từ Project Parameter."""
-        project_info = self.GetProjectInformation()
-        param_name = "Dynamo_Config"
-        param = project_info.LookupParameter(param_name)
-
-        if param and param.AsString():
-            try:
-                return json.loads(param.AsString())  # Chuyển JSON về list
-            except json.JSONDecodeError:
-                return []
-        return []
+    #     # Chuyển danh sách thành chuỗi JSON
+    #     jsonData = json.dumps(itemChecked)
+    #
+    #     # Lấy Project Information
+    #     project_info = self.GetProjectInformation()
+    #
+    #     # Tên parameter cần lưu
+    #     param_name = "Dynamo_Config"
+    #
+    #     # Kiểm tra nếu parameter đã tồn tại, nếu chưa thì tạo mới
+    #     if project_info.LookupParameter(param_name) is None:
+    #         self.AddProjectParameter(param_name)
+    #
+    #     # Ghi dữ liệu vào parameter
+    #     self.SetParameterValue(project_info, param_name, json_data)
+    #
+    #     Alert("Đã lưu danh sách vào Project Parameter!", title="Lưu Dữ Liệu")
+    #
+    # def GetProjectInformation(self):
+    #     """Lấy Project Information Category."""
+    #     return self.doc.ProjectInformation
+    #
+    # def AddProjectParameter(self, param_name):
+    #     """Thêm Project Parameter mới nếu chưa có."""
+    #     category_set = CategorySet()
+    #     category_set.Insert(self.doc.Settings.Categories.get_Item(BuiltInCategory.OST_ProjectInformation))
+    #
+    #     param_binding = self.doc.Application.Create.NewInstanceBinding(category_set)
+    #
+    #     # Tạo transaction để thêm parameter
+    #     with Transaction(self.doc, "Add Project Parameter") as t:
+    #         t.Start()
+    #
+    #         # Mở Shared Parameter File
+    #         shared_params_file = self.doc.Application.OpenSharedParameterFile()
+    #
+    #         if shared_params_file is None:
+    #             Alert("Không tìm thấy Shared Parameter File. Hãy thiết lập trước!", title="Lỗi")
+    #             t.RollBack()
+    #             return
+    #
+    #         # Kiểm tra nhóm parameter "DynamoSettings" có tồn tại không
+    #         param_group = next((g for g in shared_params_file.Groups if g.Name == "DynamoSettings"), None)
+    #         if param_group is None:
+    #             param_group = shared_params_file.Groups.Create("DynamoSettings")
+    #
+    #         # Tạo parameter mới
+    #         param_options = ExternalDefinitionCreationOptions(param_name, ParameterType.Text)
+    #         param_def = param_group.Definitions.Create(param_options)
+    #
+    #         # Thêm parameter vào Project Information
+    #         self.doc.ParameterBindings.Insert(param_def, param_binding, BuiltInParameterGroup.PG_TEXT)
+    #
+    #         t.Commit()
+    #
+    # def SetParameterValue(self, element, param_name, value):
+    #     """Đặt giá trị cho Project Parameter."""
+    #     param = element.LookupParameter(param_name)
+    #     if param:
+    #         with Transaction(self.doc, "Set Project Parameter Value") as t:
+    #             t.Start()
+    #             param.Set(value)
+    #             t.Commit()
+    #
+    # def LoadCheckedItems(self):
+    #     """Đọc danh sách từ Project Parameter."""
+    #     project_info = self.GetProjectInformation()
+    #     param_name = "Dynamo_Config"
+    #     param = project_info.LookupParameter(param_name)
+    #
+    #     if param and param.AsString():
+    #         try:
+    #             return json.loads(param.AsString())  # Chuyển JSON về list
+    #         except json.JSONDecodeError:
+    #             return []
+    #     return []
 
 
