@@ -27,7 +27,6 @@ from pyrevit import forms, revit, script, EXEC_PARAMS
 
 from rpw.ui.forms import *
 from MainForm import MainForm
-from InputForm import InputForm
 
 clr.AddReference('ProtoGeometry')  # Dynamo's geometry proxy
 from Autodesk.DesignScript.Geometry import *  # Import everything from Dynamo's geometry
@@ -63,6 +62,9 @@ DB = Autodesk.Revit.DB
 output = script.get_output()
 version = int(app.VersionNumber)
 selection = uidoc.Selection
+
+# Đặt lệnh này NGAY SAU khi import System.Windows.Forms
+Application.EnableVisualStyles()
 
 """ ----------------------FUNCTIONS----------------------------"""
 
@@ -250,7 +252,7 @@ def ExportToExcel(sheet_titles, start_row, start_column, data):
     # print("So luong sheet duoc tao:", len(sheet_titles))
     # print("Data Input:")
     for i, d in enumerate(transposeData):
-        print(50*"-")
+        print(50 * "-")
         print("Sheet {}: {}".format(sheet_titles[i], d))
 
     # Duyệt qua từng sheet
@@ -291,7 +293,7 @@ def ExportToExcel(sheet_titles, start_row, start_column, data):
     # workbook.Close(SaveChanges=False)
     # excel_app.Quit()
 
-     # Giải phóng bộ nhớ
+    # Giải phóng bộ nhớ
     # del workbook
     # del excel_app
 
@@ -303,6 +305,7 @@ def ExportToExcel(sheet_titles, start_row, start_column, data):
     # )
 
     """----------------------MAIN CODE----------------------------"""
+
 
 if __name__ == "__main__":
     try:
@@ -327,120 +330,108 @@ if __name__ == "__main__":
         param = projectInfo.LookupParameter("checkTagConfiguration")
 
         if param is None:
-            Alert(content="Please run Setting First",title="Warning",exit=True)
+            Alert(content="Please run Setting First", title="Warning", exit=True)
         else:
             paramValue = param.AsValueString()
             if not paramValue:
-                Alert(content="Please run Setting First",title="Warning",exit=True)
+                Alert(content="Please run Setting First", title="Warning", exit=True)
             else:
-                formInputInstance = InputForm(sortedData)
                 data = json.loads(paramValue)
-                checkedItems = data.get('listViewItem', [])
+                selectCateName = data.get('listViewItem', [])
+
+                # selectCateName = forms.SelectFromList.show(
+                #     {'Annotation Categories': ops},
+                #     title='Select Categories',
+                #     group_selector_title='Select Categories',
+                #     multiselect=True
+                # )
+                #
+                # if not selectCateName:
+                #     Alert('No choose any category.', exit=True)
+                # else:
+                #
+                #     config.selected_category = ToList(selectCateName)
+                #     script.save_config()
+                #
+                #
+                #
+                processCateTag = ProcessCategoryTag(selectCateName)
+
+                allTagOfCategoryInView = AllElementOfCategoryInView(view, selectCateName)
+                taggedElement = Flatten_lv3([GetTaggedElement(tag) for tag in allTagOfCategoryInView])  # List 2
+
+                cateNameOfTaggedElement = sorted(list(set([ele.Category.Name for ele in taggedElement])))
+                allModelElement = AllElementOfCategoryInView(view, cateNameOfTaggedElement)  # List 1
+
+                allEle = AllElementOfCategoryInView(view, selectCateName)
+
+                """----------------------Compare and find elements have not been tagged----------------------------"""
+
+                taggedElementId = [element.Id for element in taggedElement]
+                modelElementId = [element.Id for element in allModelElement]
+
+                notTaggedElementId = SetDifference(modelElementId, taggedElementId)
+                notTaggedCategoryName = [doc.GetElement(id).Category.Name for id in notTaggedElementId]
+
+                groupElementByCategory = GroupByKey(notTaggedElementId, notTaggedCategoryName)
+                notTaggedElementGroup = groupElementByCategory[0]  # Get elements have been grouped
+                notTaggedCategoryGroup = groupElementByCategory[1]
+
+                taggedCategory = list(set(cateNameOfTaggedElement) - set(notTaggedCategoryGroup))
+
+                try:
+                    if len(allTagOfCategoryInView) == 0:
+                        Alert('All Elements Have Not Been Tagged.', exit=True)
+                    elif len(notTaggedCategoryGroup) > 0:
+                        notTaggedCategory = [GetElementCategory(doc.GetElement(Id)) for Id in notTaggedElementId]
+                        notTaggedFamilyRaw = [GetFamilyNameOfElement(doc.GetElement(Id)) for Id in notTaggedElementId]
+                        notTaggedTypeRaw = [GetTypeNameOfElement(doc.GetElement(Id)) for Id in notTaggedElementId]
+                        notTaggedIdRaw = [Id.IntegerValue for Id in notTaggedElementId]
+
+                        groupFamily = GroupByKey(notTaggedFamilyRaw, notTaggedCategory)
+                        notTaggedFamily = groupFamily[0]
+
+                        groupType = GroupByKey(notTaggedTypeRaw, notTaggedCategory)
+                        notTaggedType = groupType[0]
+
+                        groupId = GroupByKey(notTaggedIdRaw, notTaggedCategory)
+                        notTaggedId = groupId[0]
+
+                        data = [[list(zip(family, typeName, ids))] if len(family) == 1 else [[(fam, typ, Id)] for
+                                                                                             fam, typ, Id in
+                                                                                             zip(family, typeName, ids)]
+                                for
+                                family, typeName, ids in zip(notTaggedFamily, notTaggedType, notTaggedId)]
+
+                        """-----------RUN FORM-----------"""
+                        f = MainForm(notTaggedCategory, notTaggedFamilyRaw, notTaggedTypeRaw, notTaggedIdRaw,
+                                     processCateTag,
+                                     selectCateName, notTaggedCategoryGroup, data)
+                        # f.LoadData(notTaggedCategory, notTaggedFamilyRaw, notTaggedTypeRaw, notTaggedIdRaw)
+                        Application.Run(f)
+
+                        # ExportToExcel(notTaggedCategoryGroup, 1, 1, data)
+
+                    if len(taggedCategory) != 0:
+                        result = ", ".join(map(str, taggedCategory))
+                        print('All Elements Of  {} Have Been Tagged.'.format(result))
+
+                    # if processCateTag:
+                    #     raw = ""
+                    #     for bool, cate in zip(processCateTag, selectCateName):
+                    #         if bool == False:
+                    #             if raw == "":
+                    #                 raw += cate
+                    #             else:
+                    #                 raw += ", " + cate
+                    #     if raw == "":
+                    #         pass
+                    #     else:
+                    #         print('Can not find any {} in view.'.format(raw))
 
 
-
-        # # Đặt lệnh này NGAY SAU khi import System.Windows.Forms
-        # Application.EnableVisualStyles()
-        #
-        # # Sau đó mới tạo và chạy form
-        # formInputInstance = InputForm(sortedData)
-        # Application.Run(formInputInstance)
-
-
-
-        # formInputInstance.Show()
-
-
-        # selectCateName = forms.SelectFromList.show(
-        #     {'Annotation Categories': ops},
-        #     title='Select Categories',
-        #     group_selector_title='Select Categories',
-        #     multiselect=True
-        # )
-        #
-        # if not selectCateName:
-        #     Alert('No choose any category.', exit=True)
-        # else:
-        #
-        #     config.selected_category = ToList(selectCateName)
-        #     script.save_config()
-        #
-        #
-        #
-        #     processCateTag = ProcessCategoryTag(selectCateName)
-        #
-        #     allTagOfCategoryInView = AllElementOfCategoryInView(view, selectCateName)
-        #     taggedElement = Flatten_lv3([GetTaggedElement(tag) for tag in allTagOfCategoryInView])  # List 2
-        #
-        #     cateNameOfTaggedElement = sorted(list(set([ele.Category.Name for ele in taggedElement])))
-        #     allModelElement = AllElementOfCategoryInView(view, cateNameOfTaggedElement)  # List 1
-        #
-        #     allEle = AllElementOfCategoryInView(view, selectCateName)
-        #
-        #     """----------------------Compare and find elements have not been tagged----------------------------"""
-        #
-        #     taggedElementId = [element.Id for element in taggedElement]
-        #     modelElementId = [element.Id for element in allModelElement]
-        #
-        #     notTaggedElementId = SetDifference(modelElementId, taggedElementId)
-        #     notTaggedCategoryName = [doc.GetElement(id).Category.Name for id in notTaggedElementId]
-        #
-        #     groupElementByCategory = GroupByKey(notTaggedElementId, notTaggedCategoryName)
-        #     notTaggedElementGroup = groupElementByCategory[0]  # Get elements have been grouped
-        #     notTaggedCategoryGroup = groupElementByCategory[1]
-        #
-        #     taggedCategory = list(set(cateNameOfTaggedElement) - set(notTaggedCategoryGroup))
-        #
-        #     try:
-        #         if len(allTagOfCategoryInView) == 0:
-        #             Alert('All Elements Have Not Been Tagged.', exit=True)
-        #         elif len(notTaggedCategoryGroup) > 0:
-        #             notTaggedCategory = [GetElementCategory(doc.GetElement(Id)) for Id in notTaggedElementId]
-        #             notTaggedFamilyRaw = [GetFamilyNameOfElement(doc.GetElement(Id)) for Id in notTaggedElementId]
-        #             notTaggedTypeRaw = [GetTypeNameOfElement(doc.GetElement(Id)) for Id in notTaggedElementId]
-        #             notTaggedIdRaw = [Id.IntegerValue for Id in notTaggedElementId]
-        #
-        #             groupFamily = GroupByKey(notTaggedFamilyRaw, notTaggedCategory)
-        #             notTaggedFamily = groupFamily[0]
-        #
-        #             groupType = GroupByKey(notTaggedTypeRaw, notTaggedCategory)
-        #             notTaggedType = groupType[0]
-        #
-        #             groupId = GroupByKey(notTaggedIdRaw, notTaggedCategory)
-        #             notTaggedId = groupId[0]
-        #
-        #             data = [[list(zip(family, typeName, ids))] if len(family) == 1 else [[(fam, typ, Id)] for fam, typ, Id in
-        #                                                                                  zip(family, typeName, ids)] for
-        #                     family, typeName, ids in zip(notTaggedFamily, notTaggedType, notTaggedId)]
-        #
-        #             """-----------RUN FORM-----------"""
-        #             f = MainForm(notTaggedCategory, notTaggedFamilyRaw, notTaggedTypeRaw, notTaggedIdRaw, processCateTag,
-        #                          selectCateName,notTaggedCategoryGroup,data)
-        #             # f.LoadData(notTaggedCategory, notTaggedFamilyRaw, notTaggedTypeRaw, notTaggedIdRaw)
-        #             f.Show()
-        #
-        #             # ExportToExcel(notTaggedCategoryGroup, 1, 1, data)
-        #
-        #         if len(taggedCategory) != 0:
-        #             result = ", ".join(map(str, taggedCategory))
-        #             print('All Elements Of  {} Have Been Tagged.'.format(result))
-        #
-        #         # if processCateTag:
-        #         #     raw = ""
-        #         #     for bool, cate in zip(processCateTag, selectCateName):
-        #         #         if bool == False:
-        #         #             if raw == "":
-        #         #                 raw += cate
-        #         #             else:
-        #         #                 raw += ", " + cate
-        #         #     if raw == "":
-        #         #         pass
-        #         #     else:
-        #         #         print('Can not find any {} in view.'.format(raw))
-        #
-        #
-        #     except Exception as exx:
-        #         TaskDialog.Show("Failed", "Warning: {}".format(exx))  # Corrected string formatting
+                except Exception as exx:
+                    TaskDialog.Show("Failed", "Warning: {}".format(exx))  # Corrected string formatting
 
 
 

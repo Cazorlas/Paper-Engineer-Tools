@@ -36,6 +36,10 @@ clr.AddReference('System.Drawing')
 
 import System.Drawing
 import System.Windows.Forms
+from System.Windows.Forms import Application
+
+Application.EnableVisualStyles()
+
 import os
 from System.Drawing import Icon  # Import Icon class
 import System.Diagnostics  # Open Link when press Button
@@ -49,8 +53,8 @@ from System.Collections.Generic import List
 
 """---------------------------Get active document and view from Revit------------------------"""
 app = __revit__.Application
-# doc = __revit__.ActiveUIDocument.Document
-doc = revit.doc
+doc = __revit__.ActiveUIDocument.Document
+# doc = revit.doc
 view = doc.ActiveView
 uidoc = __revit__.ActiveUIDocument
 uiviews = uidoc.GetOpenUIViews()
@@ -453,7 +457,11 @@ class InputForm(Form):
 
     def BtnSaveClick(self, sender, e):
         itemChecked = [item.Text for item in self._listView1.Items if item.Checked]
-        jsonData = json.dumps({"listViewItem": itemChecked}, ensure_ascii=False, indent=4)
+        selectedComboBoxItem = self._comboBox1.SelectedItem if self._comboBox1.SelectedItem else ""
+
+        jsonData = json.dumps({
+            "listViewItem": itemChecked, "selectedComboBox": selectedComboBoxItem
+        }, ensure_ascii=False, indent=4)
 
         # configData = {
         #     "listViewItem": itemChecked,
@@ -473,6 +481,7 @@ class InputForm(Form):
         self.SetParameterValue(projectInfo, paramName, jsonData)
 
         Alert("Danh sách đã được lưu!", title="Lưu Dữ Liệu")
+        self.Close()
 
     def AddProjectParameter(self, paramName, jsonData):
         """Thêm Shared Parameter vào Project Information và lưu giá trị JSON vào đó."""
@@ -559,11 +568,17 @@ class InputForm(Form):
             try:
                 data = json.loads(param.AsValueString())
                 checkedItems = data.get('listViewItem', [])
+                selectedComboBoxItem = data.get('selectedComboBox', "")
 
                 # Kiểm tra và check lại các mục trong ListView nếu chúng nằm trong danh sách đã lưu
                 for item in self._listView1.Items:
                     if item.Text in checkedItems:
                         item.Checked = True
+
+                # Cập nhật giá trị ComboBox nếu có trong danh sách
+                if selectedComboBoxItem and selectedComboBoxItem in self._comboBox1.Items:
+                    self._comboBox1.SelectedItem = selectedComboBoxItem
+
             except json.JSONDecodeError:
                 Alert("Dữ liệu Parameter không hợp lệ!", title="Lỗi")
 
@@ -590,3 +605,20 @@ class InputForm(Form):
     #         for item in self._listView1.Items:
     #             if item.Text in checkedItems:
     #                 item.Checked = True
+
+
+if __name__ == "__main__":
+    def AllAnnotationCategories():
+        allCategories = doc.Settings.Categories
+
+        return [cat for cat in allCategories if cat.CategoryType == CategoryType.Annotation]
+
+
+    annotationCategories = AllAnnotationCategories()
+    annotationCategoriesName = [cate.Name for cate in annotationCategories]
+    annotationCategoriesDict = dict(zip(annotationCategoriesName, annotationCategories))
+    sortedData = sorted(annotationCategoriesName)
+
+    # Tạo và hiển thị form
+    form = InputForm(sortedData)
+    Application.Run(form)
