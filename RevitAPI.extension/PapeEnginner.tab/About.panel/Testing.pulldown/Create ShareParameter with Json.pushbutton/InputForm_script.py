@@ -35,10 +35,10 @@ clr.AddReference('System.Windows.Forms')
 clr.AddReference('System.Drawing')
 
 import System.Drawing
+import System.Windows.Forms
 from System.Windows.Forms import Application
 
 Application.EnableVisualStyles()
-# Application.SetCompatibleTextRenderingDefault(False)
 
 import os
 from System.Drawing import Icon  # Import Icon class
@@ -160,10 +160,8 @@ class InputForm(Form):
         self._btnCheckUncheck = System.Windows.Forms.Button()
         self._btnToggle = System.Windows.Forms.Button()
         self._btnHide = System.Windows.Forms.Button()
-        self._btnSave = System.Windows.Forms.Button()
-        self._btnImport = System.Windows.Forms.Button()
-        self._btnExport = System.Windows.Forms.Button()
         self._tableLayoutPanel31 = System.Windows.Forms.TableLayoutPanel()
+        self._btnSave = System.Windows.Forms.Button()
         self._panel1.SuspendLayout()
         self._panel3.SuspendLayout()
         self._panel2.SuspendLayout()
@@ -334,7 +332,7 @@ class InputForm(Form):
             System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33))
         self._tableLayoutPanel31.Controls.Add(self._btnToggle, 1, 0)
         self._tableLayoutPanel31.Controls.Add(self._btnCheckUncheck, 0, 0)
-        self._tableLayoutPanel31.Controls.Add(self._btnHide, 2, 0)
+        self._tableLayoutPanel31.Controls.Add(self._btnHide, 3, 0)
         self._tableLayoutPanel31.Controls.Add(self._btnSave, 0, 1)
         self._tableLayoutPanel31.SetColumnSpan(self._btnSave, 3)
         self._tableLayoutPanel31.Dock = System.Windows.Forms.DockStyle.Fill
