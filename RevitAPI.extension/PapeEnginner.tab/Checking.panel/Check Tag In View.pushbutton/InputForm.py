@@ -477,6 +477,10 @@ class InputForm(Form):
     def AddProjectParameter(self, paramName, jsonData):
         """Thêm Shared Parameter vào Project Information và lưu giá trị JSON vào đó."""
 
+        # allCategory = [category for category in doc.Settings.Categories]
+        # builtInParameterGroups = [group for group in System.Enum.GetValues(DB.BuiltInParameterGroup)]
+        # builtInParameterGroupNames = [DB.LabelUtils.GetLabelFor(n) for n in builtInParameterGroups]
+
         scriptDir = os.path.dirname(__file__)  # Lấy thư mục script
         SharedParamFile = os.path.join(scriptDir, "CheckTagConfiguration.txt")  # File của bạn
 
