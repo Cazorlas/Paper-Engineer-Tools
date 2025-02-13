@@ -4,6 +4,8 @@ from mailbox import Message
 import clr
 import System
 import string
+import os
+import random
 from rpw.ui.forms import Alert
 
 # Importing necessary references for Revit and Windows Forms
@@ -34,7 +36,6 @@ clr.AddReference('System.Drawing')
 
 import System.Drawing
 import System.Windows.Forms
-import os
 from System.Drawing import Icon  # Import Icon class
 import System.Diagnostics  # Open Link when press Button
 
@@ -66,6 +67,13 @@ class MainForm(Form):
         self.selectCateName = selectCateName
         self.sheetsTitle = notTaggedCategoryGroup
         self.data = data
+
+        self.imageList = [
+            os.path.join(__commandpath__, "image1.jpg"),
+            os.path.join(__commandpath__, "image2.jpg"),
+            os.path.join(__commandpath__, "image3.jpg"),
+            os.path.join(__commandpath__, "image4.jpg"),
+        ]
 
         self.InitializeComponent()
         self.LoadData()
@@ -631,5 +639,3 @@ class MainForm(Form):
     def CloseBtnClick(self, sender, e):
         self.Close()
 
-    # def Show(self):
-    #     self.Show()

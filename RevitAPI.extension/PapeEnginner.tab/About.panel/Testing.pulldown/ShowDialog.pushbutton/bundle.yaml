@@ -1,0 +1,14 @@
+title: Calculate Volume
+
+tooltip: >-
+  Calculate the sum of volume (spaces or rooms)
+            
+
+context:
+    - any:
+        - rooms
+        - spaces
+
+help_url: "https://www.youtube.com/@paper.engineer"
+
+author: Paper Engineer

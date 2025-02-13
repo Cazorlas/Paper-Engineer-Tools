@@ -5,7 +5,6 @@ import clr
 import System
 from System import Enum
 import json
-from pyrevit import *
 from rpw.ui.forms import Alert
 
 # Importing necessary references for Revit and Windows Forms
@@ -16,7 +15,7 @@ from RevitServices.Transactions import TransactionManager
 
 clr.AddReference("RevitNodes")
 import Revit
-from pyrevit import *
+from pyrevit import forms, revit, script
 
 # Excel Libraary
 clr.AddReference('Microsoft.Office.Interop.Excel')
@@ -61,70 +60,6 @@ uiviews = uidoc.GetOpenUIViews()
 jsonFile = os.path.join(os.getenv("APPDATA"), "CheckTagConfig.json")
 uiview = [x for x in uiviews if x.ViewId == view.Id][0]
 """-------------------------------------------------------------------------------------------"""
-categoryNamesType = ["Air Terminals", "Analytical Links", "Analytical Pipe Connections", "Assemblies",
-                     "Audio Visual Devices", "Cable Tray Fittings", "Cable Tray Runs", "Cable Trays", "Casework",
-                     "Ceilings", "Columns", "Communication Devices", "Conduit Fittings", "Conduit Runs", "Conduits",
-                     "Curtain Panels", "Curtain Systems", "Curtain Wall Mullions", "Data Devices", "Detail Items",
-                     "Doors", "Duct Accessories", "Duct Fittings", "Duct Insulations",
-                     "Duct Linings", "Duct Placeholders", "Duct Systems", "Ducts", "Electrical Equipment",
-                     "Electrical Fixtures", "Entourage", "Fire Alarm Devices", "Fire Protection", "Flex Ducts",
-                     "Flex Pipes", "Floors", "Food Service Equipment", "Furniture", "Furniture Systems",
-                     "Generic Models", "Grids", "Hardscape", "Levels", "Lighting Devices", "Lighting Fixtures", "Mass",
-                     "Mechanical Control Devices", "Mechanical Equipment", "Mechanical Equipment Sets",
-                     "Medical Equipment", "MEP Fabrication Containment", "MEP Fabrication Ductwork",
-                     "MEP Fabrication Hangers", "MEP Fabrication Pipework", "Model Groups", "Nurse Call Devices",
-                     "Parking",
-                     "Pipe Accessories", "Pipe Fittings", "Pipe Insulations", "Pipe Placeholders", "Pipes",
-                     "Piping Systems", "Planting", "Plumbing Equipment", "Plumbing Fixtures", "RVT Links", "Railings",
-                     "Ramps", "Rebar Shape", "Roads", "Roofs", "Security Devices", "Signage", "Site",
-                     "Specialty Equipment", "Sprinklers", "Stairs", "Structural Area Reinforcement",
-                     "Structural Beam Systems", "Structural Columns", "Structural Connections",
-                     "Structural Fabric Areas", "Structural Fabric Reinforcement", "Structural Foundations",
-                     "Structural Framing", "Structural Path Reinforcement", "Structural Rebar",
-                     "Structural Rebar Couplers", "Structural Stiffeners", "Structural Trusses", "Telephone Devices",
-                     "Temporary Structures", "Topography", "Vertical Circulation", "Walls", "Windows", "Wires"]
-
-categoryNamesInstance = ["Air Systems", "Air Terminals", "Analytical Links", "Analytical Members", "Analytical Nodes",
-                         "Analytical Openings", "Analytical Panels", "Analytical Pipe Connections", "Analytical Spaces",
-                         "Analytical Surfaces", "Areas", "Assemblies", "Audio Visual Devices",
-                         "Cable Tray Fittings", "Cable Tray Runs", "Cable Trays", "Casework", "Ceilings", "Columns",
-                         "Communication Devices", "Conduit Fittings", "Conduit Runs", "Conduits", "Curtain Panels",
-                         "Curtain Systems", "Curtain Wall Mullions", "Data Devices", "Detail Items", "Doors",
-                         "Duct Accessories", "Duct Fittings", "Duct Insulations", "Duct Linings", "Duct Placeholders",
-                         "Duct Systems", "Ducts", "Electrical Analytical Bus", "Electrical Analytical Loads",
-                         "Electrical Analytical Power Source", "Electrical Analytical Transfer Switch",
-                         "Electrical Analytical Transformer", "Electrical Circuits", "Electrical Equipment",
-                         "Electrical Fixtures", "Electrical Load Areas", "Entourage", "Fire Alarm Devices",
-                         "Fire Protection", "Flex Ducts", "Flex Pipes", "Floors", "Food Service Equipment", "Furniture",
-                         "Furniture Systems", "Generic Models", "Grids", "HVAC Zones", "Hardscape", "Levels",
-                         "Lighting Devices", "Lighting Fixtures", "MEP Fabrication Containment",
-                         "MEP Fabrication Ductwork", "MEP Fabrication Hangers", "MEP Fabrication Pipework", "Mass",
-                         "Materials", "Mechanical Control Devices", "Mechanical Equipment", "Mechanical Equipment Sets",
-                         "Medical Equipment", "Model Groups", "Nurse Call Devices", "Parking", "Parts",
-                         "Pipe Accessories", "Pipe Fittings", "Pipe Insulations", "Pipe Placeholders", "Pipes",
-                         "Piping Systems", "Planting", "Plumbing Equipment", "Plumbing Fixtures", "Project Information",
-                         "RVT Links", "Railings", "Ramps", "Rebar Shape", "Roads", "Roofs", "Rooms", "Schedules",
-                         "Security Devices", "Shaft Openings", "Sheets", "Signage", "Site", "Spaces",
-                         "Specialty Equipment", "Sprinklers", "Stairs", "Structural Area Reinforcement",
-                         "Structural Beam Systems", "Structural Columns", "Structural Connections",
-                         "Structural Fabric Areas", "Structural Fabric Reinforcement", "Structural Foundations",
-                         "Structural Framing", "Structural Path Reinforcement", "Structural Rebar",
-                         "Structural Rebar Couplers", "Structural Stiffeners", "Structural Trusses", "Switch System",
-                         "System-Zones", "Telephone Devices", "Temporary Structures", "Topography",
-                         "Vertical Circulation", "Views", "Walls", "Water Loops", "Windows", "Wires", "Zone Equipment"]
-
-builtInParameterGroup = ["Analysis Results", "Analytical Alignment", "Analytical Model", "Constraints", "Construction",
-                         "Data", "Dimensions", "Division Geometry", "Electrical", "Electrical - Circuiting",
-                         "Electrical - Lighting", "Electrical - Loads",
-                         "Electrical Analysis", "Fire Protection", "Forces", "General", "Graphics",
-                         "Green Building Properties", "Identity Data",
-                         "IFC Parameters", "Layers", "Life Safety", "Materials and Finishes", "Mechanical",
-                         "Mechanical Flow", "Mechanical Loads",
-                         "Model Properties", "Moments", "Other", "Overall Legend", "Phasing", "Photometrics",
-                         "Plumbing", "Primary End", "Rebar Set", "Releases / Member Forces",
-                         "Secondary End", "Segments and Fittings", "Set", "Slab Shape Edit", "Structural",
-                         "Structural Analysis", "Text", "Title Text", "Visibility"]
-
 lstSelect = ["Annotation Categories"]
 
 
@@ -137,8 +72,7 @@ class InputForm(Form):
         self.ListViewItems = []  # Danh sách chứa các mục ban đầu
 
         self.InitializeComponent()
-        self.LoadCheckedItemsFromParameter()
-        # self.LoadConfig()
+        self.LoadConfig()
 
     def InitializeComponent(self):
         # Get the directory of the running script
@@ -161,6 +95,8 @@ class InputForm(Form):
         self._btnToggle = System.Windows.Forms.Button()
         self._btnHide = System.Windows.Forms.Button()
         self._btnSave = System.Windows.Forms.Button()
+        self._btnImport = System.Windows.Forms.Button()
+        self._btnExport = System.Windows.Forms.Button()
         self._btnImport = System.Windows.Forms.Button()
         self._btnExport = System.Windows.Forms.Button()
         self._tableLayoutPanel31 = System.Windows.Forms.TableLayoutPanel()
@@ -307,7 +243,7 @@ class InputForm(Form):
         self._btnHide.Name = "btnHide"
         self._btnHide.Size = System.Drawing.Size(158, 35)
         self._btnHide.TabIndex = 0
-        self._btnHide.Text = "Hide/Unhide Selected"
+        self._btnHide.Text = "Hide/Unhide Unselected"
         self._btnHide.UseVisualStyleBackColor = True
         self._btnHide.Click += self.BtnHideClick
         #
@@ -323,6 +259,30 @@ class InputForm(Form):
         self._btnSave.UseVisualStyleBackColor = True
         self._btnSave.Click += self.BtnSaveClick
         #
+        # btnImport
+        #
+        self._btnImport.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
+        self._btnImport.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink
+        self._btnImport.Location = System.Drawing.Point(8, 49)
+        self._btnImport.Name = "btnImport"
+        self._btnImport.Size = System.Drawing.Size(142, 33)
+        self._btnImport.TabIndex = 1
+        self._btnImport.Text = "Import Data"
+        self._btnImport.UseVisualStyleBackColor = True
+        self._btnImport.Click += self.BtnImportClick
+        #
+        # btnExport
+        #
+        self._btnExport.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
+        self._btnExport.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink
+        self._btnExport.Location = System.Drawing.Point(308, 49)
+        self._btnExport.Name = "btnExport"
+        self._btnExport.Size = System.Drawing.Size(143, 33)
+        self._btnExport.TabIndex = 2
+        self._btnExport.Text = "Export Data"
+        self._btnExport.UseVisualStyleBackColor = True
+        self._btnExport.Click += self.BtnExportClick
+        #
         # tableLayoutPanel31
         #
         self._tableLayoutPanel31.ColumnCount = 3
@@ -332,11 +292,17 @@ class InputForm(Form):
             System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 34))
         self._tableLayoutPanel31.ColumnStyles.Add(
             System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33))
+
         self._tableLayoutPanel31.Controls.Add(self._btnToggle, 1, 0)
         self._tableLayoutPanel31.Controls.Add(self._btnCheckUncheck, 0, 0)
         self._tableLayoutPanel31.Controls.Add(self._btnHide, 2, 0)
+
         self._tableLayoutPanel31.Controls.Add(self._btnSave, 0, 1)
-        self._tableLayoutPanel31.SetColumnSpan(self._btnSave, 3)
+        # self._tableLayoutPanel31.SetColumnSpan(self._btnSave, 3)
+        self._tableLayoutPanel31.Controls.Add(self._btnImport, 0, 1)
+        self._tableLayoutPanel31.Controls.Add(self._btnSave, 1, 1)
+        self._tableLayoutPanel31.Controls.Add(self._btnExport, 2, 1)
+
         self._tableLayoutPanel31.Dock = System.Windows.Forms.DockStyle.Fill
         self._tableLayoutPanel31.Location = System.Drawing.Point(0, 0)
         self._tableLayoutPanel31.Name = "tableLayoutPanel31"
@@ -431,182 +397,157 @@ class InputForm(Form):
             item.Checked = not item.Checked
 
     def BtnHideClick(self, sender, e):
-        """Ẩn các mục chưa được check và hiện lại chúng theo thứ tự ban đầu."""
-        # Đảo ngược trạng thái ẩn/hiện
-        self.HiddenState = not self.HiddenState
-        self._listView1.BeginUpdate()
+        """Ẩn các mục chưa được chọn và hiển thị lại ở đúng vị trí ban đầu khi nhấn lần nữa."""
+        self.HiddenState = not self.HiddenState  # Đảo trạng thái ẩn/hiện
+        self._listView1.BeginUpdate()  # Dừng cập nhật giao diện trong lúc thay đổi
 
         if self.HiddenState:
-            # Lấy ra các mục chưa được check (ẩn chúng)
-            self.HiddenItems = [(idx, item) for (idx, item) in self.ListViewItems
-                                if not item.Checked and item in self._listView1.Items]
-            # Loại bỏ từng mục khỏi ListView
-            for idx, item in self.HiddenItems:
-                self._listView1.Items.Remove(item)
-        else:
-            # Khi mở trạng thái hiển thị: khôi phục lại toàn bộ ListView theo thứ tự ban đầu.
-            self._listView1.Items.Clear()
-            # Sắp xếp các mục theo index ban đầu rồi thêm lại vào ListView
-            for idx, item in sorted(self.ListViewItems, key=lambda x: x[0]):
-                self._listView1.Items.Add(item)
-            # Xóa danh sách các mục đã ẩn
-            self.HiddenItems = []
+            # Lưu danh sách các mục chưa được chọn cùng với vị trí ban đầu của chúng
+            self.HiddenItems = [(self._listView1.Items.IndexOf(item), item) for item in self._listView1.Items if not item.Checked]
 
-        self._listView1.EndUpdate()
+            # Xóa các mục chưa chọn khỏi ListView
+            for _, item in self.HiddenItems:
+                self._listView1.Items.Remove(item)
+
+        else:
+            # Khi hiển thị lại, thêm các mục vào đúng vị trí ban đầu
+            for index, item in sorted(self.HiddenItems, key=lambda x: x[0]):  # Sắp xếp theo index cũ
+                self._listView1.Items.Insert(index, item)
+
+            self.HiddenItems = []  # Xóa danh sách lưu trữ
+
+        self._listView1.EndUpdate()  # Cho phép cập nhật giao diện sau khi thay đổi
+
+
+
+    def BtnExportClick(self, sender, e):
+        itemChecked = [item.Text for item in self._listView1.Items if item.Checked]
+        selectedComboBoxItem = self._comboBox1.SelectedItem if self._comboBox1.SelectedItem else ""
+
+        configData = {
+            "listViewItem": itemChecked,
+            "selectedComboBox": selectedComboBoxItem
+        }
+
+        if len(itemChecked) > 0:
+            fileSave = forms.save_file(file_ext='json',default_name="Data",restore_dir= True,title= "Export Data")
+
+            if fileSave:
+                try:
+                    with open(fileSave, "w") as f:
+                        json.dump(configData, f, ensure_ascii=False, indent=4)
+                    Alert(title="Success", content="Data exported successfully!")
+                except Exception as e:
+                    Alert(title="Error", content="Failed to export data!\n{}".format(str(e)))
+            else:
+                return
+        else:
+            Alert(title="Notification",content="There is no selected category")
+
+    def BtnImportClick(self, sender, e):
+        """Chọn file JSON và cập nhật dữ liệu từ file đó vào form."""
+        json_file = forms.pick_file(files_filter='Json File (*.json)|*.json', multi_file=False)
+
+        if json_file:  # Nếu người dùng chọn một tệp
+            try:
+                with open(json_file, "r") as f:
+                    config = json.load(f)
+            except (json.JSONDecodeError, FileNotFoundError):
+                Alert(title="Error", content="Invalid JSON file!")
+                return
+
+            # Trích xuất dữ liệu từ JSON
+            checkedItems = config.get('listViewItem', [])
+            selectedComboBoxItem = config.get('selectedComboBox', "")
+
+            # Reset trạng thái form (xoá danh sách cũ và cập nhật mới)
+            self._listView1.BeginUpdate()
+            self._listView1.Items.Clear()
+            self.ListViewItems = []  # Reset danh sách gốc
+
+            for idx, item in enumerate(self.data):  # Load lại danh sách
+                listItem = System.Windows.Forms.ListViewItem(str(item))
+                listItem.Checked = item in checkedItems  # Check nếu item nằm trong JSON
+                self._listView1.Items.Add(listItem)
+                self.ListViewItems.append((idx, listItem))
+
+            self._listView1.EndUpdate()
+
+            # Cập nhật ComboBox nếu có giá trị hợp lệ
+            if selectedComboBoxItem and selectedComboBoxItem in self._comboBox1.Items:
+                self._comboBox1.SelectedItem = selectedComboBoxItem
+
+            # Hiển thị thông báo hoàn tất
+            Alert(title="Notification", content="Data imported successfully!")
+
+
 
     def ListViewResize(self, sender, e):
         sender.Columns[0].Width = sender.ClientSize.Width
+
+    def ShowDialog(self, title, mainContent, allowCancellation=True):
+        """Hiển thị TaskDialog với các tham số tùy chỉnh."""
+        dialog = TaskDialog(title)
+        dialog.MainContent = mainContent
+        dialog.TitleAutoPrefix = False
+        dialog.MainIcon = TaskDialogIcon.TaskDialogIconInformation
+        dialog.CommonButtons = TaskDialogCommonButtons.Ok | TaskDialogCommonButtons.Cancel
+        dialog.AllowCancellation = allowCancellation
+        dialog.FooterText = '<a href="{0}">{1}</a>'.format(
+            "https://www.youtube.com/@paper.engineer", "Help")
+
+        return dialog.Show()
 
     def BtnSaveClick(self, sender, e):
         itemChecked = [item.Text for item in self._listView1.Items if item.Checked]
         selectedComboBoxItem = self._comboBox1.SelectedItem if self._comboBox1.SelectedItem else ""
 
-        jsonData = json.dumps({
-            "listViewItem": itemChecked, "selectedComboBox": selectedComboBoxItem
-        }, ensure_ascii=False, indent=4)
+        configData = {
+            "listViewItem": itemChecked,
+            "selectedComboBox": selectedComboBoxItem
+        }
 
-        # configData = {
-        #     "listViewItem": itemChecked,
-        # }
-
-        # Lấy Project Information
-        projectInfo = self.GetProjectInformation()
-
-        # Tên parameter cần lưu
-        paramName = "checkTagConfiguration"
-
-        # Kiểm tra nếu parameter đã tồn tại, nếu chưa thì tạo mới
-        if projectInfo.LookupParameter(paramName) is None:
-            self.AddProjectParameter(paramName, jsonData)
-
-        # Ghi dữ liệu vào parameter
-        self.SetParameterValue(projectInfo, paramName, jsonData)
-
-        Alert("Danh sách đã được lưu!", title="Lưu Dữ Liệu")
-        self.Close()
-
-    def AddProjectParameter(self, paramName, jsonData):
-        """Thêm Shared Parameter vào Project Information và lưu giá trị JSON vào đó."""
-
-        # allCategory = [category for category in doc.Settings.Categories]
-        # builtInParameterGroups = [group for group in System.Enum.GetValues(DB.BuiltInParameterGroup)]
-        # builtInParameterGroupNames = [DB.LabelUtils.GetLabelFor(n) for n in builtInParameterGroups]
-
-        scriptDir = os.path.dirname(__file__)  # Lấy thư mục script
-        SharedParamFile = os.path.join(scriptDir, "CheckTagConfiguration.txt")  # File của bạn
-
-        with Transaction(doc, "Bind Shared Parameter") as Trans:
-            Trans.Start()
-
-            # 🔹 1. Lưu đường dẫn gốc của Shared Parameter File
-            originalSharedParamFile = app.SharedParametersFilename
-
-            # 🔹 2. Cập nhật đường dẫn tới file mới
-            app.SharedParametersFilename = SharedParamFile
-            sharedParams = app.OpenSharedParameterFile()
-
-            if not sharedParams:
-                Alert("Không thể mở Shared Parameter File!", title="Lỗi")
-                app.SharedParametersFilename = originalSharedParamFile  # Khôi phục đường dẫn cũ
-                Trans.RollBack()
+        if len(itemChecked) == 0:
+            warning = self.ShowDialog("Warning",
+                                      "The script will be reset and can not run until you select at lesast one category tag")
+            if warning == TaskDialogResult.Cancel:
                 return
+            elif warning == TaskDialogResult.Ok:
+                self.SaveConfigSetting(configData)
+                self.Close()
+        else:
+            self.SaveConfigSetting(configData)
+            Alert(title="Notification", content="Data was saved")
+            self.Close()
 
-            # 🔹 3. Lấy Group chứa parameter
-            paramGroup = sharedParams.Groups.get_Item("CheckTagConfiguration")
-            if not paramGroup:
-                Alert("Không tìm thấy nhóm 'CheckTagConfiguration'!", title="Lỗi")
-                app.SharedParametersFilename = originalSharedParamFile  # Khôi phục đường dẫn cũ
-                Trans.RollBack()
-                return
+    def SaveConfigSetting(self, data):
+        """Lưu config vào file JSON."""
+        with open(jsonFile, "w") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
 
-            # 🔹 4. Lấy Definition của parameter
-            paramDef = paramGroup.Definitions.get_Item(paramName)
-            if not paramDef:
-                Alert("Không tìm thấy parameter '{}'!".format(paramName), title="Lỗi")
-                app.SharedParametersFilename = originalSharedParamFile  # Khôi phục đường dẫn cũ
-                Trans.RollBack()
-                return
+    def LoadConfig(self):
+        """Nạp danh sách các mục đã check từ JSON."""
+        if not os.path.exists(jsonFile):
+            with open(jsonFile, "w") as f:
+                json.dump({"listViewItem": []}, f, ensure_ascii=False, indent=4)
+        elif os.path.exists(jsonFile):
+            with open(jsonFile, "r") as f:
+                try:
+                    config = json.load(f)
+                except json.JSONDecodeError:
+                    config = {}
 
-            # 🔹 5. Bind parameter vào Project Information
-            categorySet = CategorySet()
-            categorySet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_ProjectInformation))
+            checkedItems = config.get('listViewItem', [])
+            selectedComboBoxItem = config.get('selectedComboBox', "")
 
-            bindingMap = doc.ParameterBindings
-            if not bindingMap.Contains(paramDef):
-                paramBinding = app.Create.NewInstanceBinding(categorySet)
-                bindingMap.Insert(paramDef, paramBinding, BuiltInParameterGroup.PG_TEXT)
+            # Kiểm tra và check lại các mục trong ListView nếu chúng nằm trong danh sách đã lưu
+            for item in self._listView1.Items:
+                if item.Text in checkedItems:
+                    item.Checked = True
 
-            # 🔹 6. Đặt giá trị JSON vào parameter
-            projectInfo = doc.ProjectInformation
-            param = projectInfo.LookupParameter(paramName)
-            if param and param.StorageType == StorageType.String:
-                param.Set(jsonData)
-
-            # 🔹 7. Khôi phục đường dẫn Shared Parameter File gốc
-            app.SharedParametersFilename = originalSharedParamFile
-
-            Trans.Commit()
-
-    def GetProjectInformation(self):
-        """Lấy Project Information Category."""
-        return doc.ProjectInformation
-
-    def SetParameterValue(self, element, paramName, value):
-        """Đặt giá trị JSON vào Project Parameter."""
-        param = element.LookupParameter(paramName)
-        if param and param.StorageType == StorageType.String:
-            with Transaction(doc, "Set Project Parameter Value") as trans:
-                trans.Start()
-                param.Set(value)
-                trans.Commit()
-
-    def LoadCheckedItemsFromParameter(self):
-        """Nạp danh sách đã lưu từ Shared Parameter."""
-        projectInfo = self.GetProjectInformation()
-        paramName = "checkTagConfiguration"
-        param = projectInfo.LookupParameter(paramName)
-
-        if param and param.StorageType == StorageType.String:
-            try:
-                data = json.loads(param.AsValueString())
-                checkedItems = data.get('listViewItem', [])
-                selectedComboBoxItem = data.get('selectedComboBox', "")
-
-                # Kiểm tra và check lại các mục trong ListView nếu chúng nằm trong danh sách đã lưu
-                for item in self._listView1.Items:
-                    if item.Text in checkedItems:
-                        item.Checked = True
-
-                # Cập nhật giá trị ComboBox nếu có trong danh sách
-                if selectedComboBoxItem and selectedComboBoxItem in self._comboBox1.Items:
-                    self._comboBox1.SelectedItem = selectedComboBoxItem
-
-            except json.JSONDecodeError:
-                Alert("Dữ liệu Parameter không hợp lệ!", title="Lỗi")
-
-    # def SaveConfigSetting(self,data):
-    #     """Lưu config vào file JSON."""
-    #     with open(jsonFile, "w") as f:
-    #         json.dump(data, f,ensure_ascii=False, indent=4)
-    #
-    # def LoadConfig(self):
-    #     """Nạp danh sách các mục đã check từ JSON."""
-    #     if not os.path.exists(jsonFile):
-    #         with open(jsonFile, "w") as f:
-    #              json.dump({"listViewItem": []}, f, ensure_ascii=False, indent=4)
-    #     elif os.path.exists(jsonFile):
-    #         with open(jsonFile, "r") as f:
-    #             try:
-    #                 config = json.load(f)
-    #             except json.JSONDecodeError:
-    #                 config = {}
-    #
-    #         checkedItems = config.get('listViewItem',[])
-    #
-    #         # Kiểm tra và check lại các mục trong ListView nếu chúng nằm trong danh sách đã lưu
-    #         for item in self._listView1.Items:
-    #             if item.Text in checkedItems:
-    #                 item.Checked = True
+            # Cập nhật giá trị ComboBox nếu có trong danh sách
+            if selectedComboBoxItem and selectedComboBoxItem in self._comboBox1.Items:
+                self._comboBox1.SelectedItem = selectedComboBoxItem
 
 
 if __name__ == "__main__":
