@@ -4,9 +4,10 @@
 import clr  # This is .NET's Common Language Runtime.
 import System  # The System namespace at the root of .NET
 import math  # Math library from Python
+import sys
 
 from System.Collections.Generic import *  # Lets you handle generics.
-from pyrevit import forms, revit, script
+from pyrevit import forms, revit, script,EXEC_PARAMS
 
 clr.AddReference('ProtoGeometry')  # A Dynamo library for its proxy geometry class
 from Autodesk.DesignScript.Geometry import *  # Loads everything in Dynamo's
@@ -108,10 +109,30 @@ def bin_data(data, criteria, toSort=True):
 
     return dict(zip(bins, sorted_data))
 
+# Định nghĩa lớp MyOption để tạo danh sách checkbox với tên tùy chọn
+class MyOption(forms.TemplateListItem):
+    def __init__(self, orig_item, checked=False):
+        """
+        Gói một đối tượng (tên danh mục) vào danh sách checkbox.
+
+        Args:
+            orig_item (str): Tên danh mục
+            checked (bool): Trạng thái ban đầu của checkbox (mặc định là False)
+
+        """
+        super(MyOption, self).__init__(orig_item, checked=checked)
+        self.item = orig_item  # Lưu trữ danh mục ban đầu
+
+    @property
+    def name(self):
+        return "{}".format(self.item)  # Hiển thị tên danh mục trong danh sách
+
 
 def select_parameters(params, bins, sorted_data):
     """Function to select parameters based on user input"""
     ops = {}
+    config = script.get_config(EXEC_PARAMS.command_name)
+    previousSelectedItems = config.get_option('selected_items', [])
 
     # Group parameters by their group names
     for i in range(len(bins)):
@@ -121,14 +142,18 @@ def select_parameters(params, bins, sorted_data):
 
     # Add 'All' group
     all_params = [param.Definition.Name for param in params]
-    ops['All'] = all_params
+    # ops['All'] = all_params
+    ops['All'] = [MyOption(param, checked= param in previousSelectedItems) for param in all_params]
 
     res = forms.SelectFromList.show(ops,
                                     title='MultiGroup List',
                                     group_selector_title='Select Parameter Group:',
                                     multiselect=True)
+    config.selected_items = res if res else []
+    script.save_config()
 
     selected_params = []
+
     if res:
         for selected_item in res:
             if selected_item == 'All':
@@ -146,6 +171,8 @@ def select_parameters(params, bins, sorted_data):
                                 break
 
     return selected_params
+
+
 
 
 def match_parameter_value(receive_eles, selected_get_params):
@@ -231,6 +258,8 @@ try:
 
     # Select parameters based on user input
     selected_get_params = select_parameters(get_params, sorted_data.keys(), sorted_data.values())
+    if not selected_get_params:
+        sys.exit()
 
     # TODO: Select element to receive parameter do Transaction
     # Select elements to receive parameters

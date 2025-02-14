@@ -396,27 +396,43 @@ class InputForm(Form):
         for item in self._listView1.Items:
             item.Checked = not item.Checked
 
+    # def BtnHideClick(self, sender, e):
+    #     """Ẩn các mục chưa được chọn và hiển thị lại ở đúng vị trí ban đầu khi nhấn lần nữa."""
+    #     self.HiddenState = not self.HiddenState  # Đảo trạng thái ẩn/hiện
+    #     self._listView1.BeginUpdate()  # Dừng cập nhật giao diện trong lúc thay đổi
+    #
+    #     if self.HiddenState:
+    #         # Lưu danh sách các mục chưa được chọn cùng với vị trí ban đầu của chúng
+    #         self.HiddenItems = [(self._listView1.Items.IndexOf(item), item) for item in self._listView1.Items if not item.Checked]
+    #
+    #         # Xóa các mục chưa chọn khỏi ListView
+    #         for _, item in self.HiddenItems:
+    #             self._listView1.Items.Remove(item)
+    #
+    #     else:
+    #         # Khi hiển thị lại, thêm các mục vào đúng vị trí ban đầu
+    #         for index, item in sorted(self.HiddenItems, key=lambda x: x[0]):  # Sắp xếp theo index cũ
+    #             self._listView1.Items.Insert(index, item)
+    #
+    #         self.HiddenItems = []  # Xóa danh sách lưu trữ
+    #
+    #     self._listView1.EndUpdate()  # Cho phép cập nhật giao diện sau khi thay đổi
+
     def BtnHideClick(self, sender, e):
-        """Ẩn các mục chưa được chọn và hiển thị lại ở đúng vị trí ban đầu khi nhấn lần nữa."""
-        self.HiddenState = not self.HiddenState  # Đảo trạng thái ẩn/hiện
-        self._listView1.BeginUpdate()  # Dừng cập nhật giao diện trong lúc thay đổi
-
+        self.HiddenState = not self.HiddenState
+        self._listView1.BeginUpdate()
+        # Xoá toàn bộ mục hiện tại
+        self._listView1.Items.Clear()
         if self.HiddenState:
-            # Lưu danh sách các mục chưa được chọn cùng với vị trí ban đầu của chúng
-            self.HiddenItems = [(self._listView1.Items.IndexOf(item), item) for item in self._listView1.Items if not item.Checked]
-
-            # Xóa các mục chưa chọn khỏi ListView
-            for _, item in self.HiddenItems:
-                self._listView1.Items.Remove(item)
-
+            # Khi ẩn: chỉ thêm lại các mục đã được check
+            for idx, item in sorted(self.ListViewItems, key=lambda x: x[0]):
+                if item.Checked:
+                    self._listView1.Items.Add(item)
         else:
-            # Khi hiển thị lại, thêm các mục vào đúng vị trí ban đầu
-            for index, item in sorted(self.HiddenItems, key=lambda x: x[0]):  # Sắp xếp theo index cũ
-                self._listView1.Items.Insert(index, item)
-
-            self.HiddenItems = []  # Xóa danh sách lưu trữ
-
-        self._listView1.EndUpdate()  # Cho phép cập nhật giao diện sau khi thay đổi
+            # Khi hiện: thêm lại tất cả các mục theo thứ tự ban đầu
+            for idx, item in sorted(self.ListViewItems, key=lambda x: x[0]):
+                self._listView1.Items.Add(item)
+        self._listView1.EndUpdate()
 
 
 

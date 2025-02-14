@@ -8,7 +8,8 @@ import math  # Standard Python math library
 
 # Import necessary .NET and Revit API libraries
 from System.Collections.Generic import *
-from pyrevit import forms, revit, script
+from pyrevit import forms, revit, script,EXEC_PARAMS
+
 
 clr.AddReference('ProtoGeometry')  # Dynamo's geometry proxy
 from Autodesk.DesignScript.Geometry import *  # Import everything from Dynamo's geometry
