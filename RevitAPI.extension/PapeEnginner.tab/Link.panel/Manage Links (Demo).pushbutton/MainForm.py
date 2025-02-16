@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from mailbox import Message
+
 
 import clr
 import System

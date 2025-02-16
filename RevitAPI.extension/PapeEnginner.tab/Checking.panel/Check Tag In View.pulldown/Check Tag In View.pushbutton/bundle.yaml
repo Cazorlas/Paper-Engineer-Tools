@@ -1,8 +1,43 @@
-title: Check Tag In View
-
-tooltip: >-
-  Check Tag of Selected Categories Tag Type in View
-   
+title:   
+  en_us: Check Tag In View
+tooltip:
+  en_us: >-          
+    📖 Description
+    
+    This tool allows you to check tags in the current view.  
+    Before running, you must configure the categories in Settings.
+    
+    ------------------------------------------------------------------
+    
+    🚀 How to Use
+    
+    1.Open Settings and select at least one category tag to check.  
+    
+    2.Click Save to apply the configuration.  
+    
+    3.If no category tag is selected, the settings will reset automatically.  
+    
+    4.Run Check Tag In View to display data of selected elements. 
+    
+    5.You can Import or Export the configuration for future use.
+    
+    ------------------------------------------------------------------
+    
+    ⚠ Warnings & Limitations
+    
+    - You must configure settings before running this tool.  
+    
+    - The script will not run if no category tag is selected.  
+    
+    - Only works with visible elements in the active view.  
+    
+    ------------------------------------------------------------------
+    
+    📜 Copyright & License
+    
+    © 2024 Paper Engineer. All rights reserved.  
+    
+    Please give proper credit if you share or use this script in your project.  
 
 help_url: "https://www.youtube.com/@paper.engineer"
 

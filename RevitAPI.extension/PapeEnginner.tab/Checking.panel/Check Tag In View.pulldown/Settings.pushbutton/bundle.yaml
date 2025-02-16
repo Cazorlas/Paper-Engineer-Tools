@@ -1,9 +1,11 @@
 title: Settings
 
 tooltip: >-
-  Configuration for Check Tag
+  Configure the categories to check. 
+  You need to run setting before running the script.
    
 
 help_url: "https://www.youtube.com/@paper.engineer"
 
 author: Paper Engineer
+

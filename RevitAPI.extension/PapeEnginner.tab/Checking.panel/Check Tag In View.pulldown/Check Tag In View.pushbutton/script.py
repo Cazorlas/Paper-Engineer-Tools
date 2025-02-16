@@ -1,15 +1,5 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import sys
-
-#  ©️ Copyright:
-#  - This script belongs to Paper Engineer.
-#  - If you appreciate my content, please give credit when using it.
-#
-#  Please contact to: trinhvutuanhung@gmail.com,
-#  or visit: https://www.youtube.com/@paper.engineer
-#  to get more information
-#
-
 # TODO: Import libraries and modules
 import clr  # Common Language Runtime for .NET
 import System

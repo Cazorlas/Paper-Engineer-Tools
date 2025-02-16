@@ -1,5 +1,23 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from mailbox import Message
+__title__ = 'Settings'
+__author__ = "Paper Engineer"
+__doc__ = """Version = 1.0
+Date    = 14.02.2025
+__________________________________________________________________
+Description
+Configure the categories to check. You need to run setting before running the script.
+__________________________________________________________________
+How to Use
+-> Choose at least one category tag to check
+-> Save the Setting
+-> If there is no category tag to choose, the setting will be reset
+-> You can Import or Export the Setting configuration
+__________________________________________________________________
+Copyright & License
+© 2024 Paper Engineer.
+All rights reserved. Please give proper credit if you share or use this script in your project.
+"""
 
 import clr
 import System
@@ -317,6 +335,7 @@ class InputForm(Form):
         #
         self.AcceptButton = self._btnSave
         self.BackColor = System.Drawing.SystemColors.ControlLightLight
+        self.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
         self.ClientSize = System.Drawing.Size(507, 469)
         self.MinimumSize = self.Size
         self.Controls.Add(self._panel2)
@@ -395,28 +414,6 @@ class InputForm(Form):
         """Toggle checked state of each individual item."""
         for item in self._listView1.Items:
             item.Checked = not item.Checked
-
-    # def BtnHideClick(self, sender, e):
-    #     """Ẩn các mục chưa được chọn và hiển thị lại ở đúng vị trí ban đầu khi nhấn lần nữa."""
-    #     self.HiddenState = not self.HiddenState  # Đảo trạng thái ẩn/hiện
-    #     self._listView1.BeginUpdate()  # Dừng cập nhật giao diện trong lúc thay đổi
-    #
-    #     if self.HiddenState:
-    #         # Lưu danh sách các mục chưa được chọn cùng với vị trí ban đầu của chúng
-    #         self.HiddenItems = [(self._listView1.Items.IndexOf(item), item) for item in self._listView1.Items if not item.Checked]
-    #
-    #         # Xóa các mục chưa chọn khỏi ListView
-    #         for _, item in self.HiddenItems:
-    #             self._listView1.Items.Remove(item)
-    #
-    #     else:
-    #         # Khi hiển thị lại, thêm các mục vào đúng vị trí ban đầu
-    #         for index, item in sorted(self.HiddenItems, key=lambda x: x[0]):  # Sắp xếp theo index cũ
-    #             self._listView1.Items.Insert(index, item)
-    #
-    #         self.HiddenItems = []  # Xóa danh sách lưu trữ
-    #
-    #     self._listView1.EndUpdate()  # Cho phép cập nhật giao diện sau khi thay đổi
 
     def BtnHideClick(self, sender, e):
         self.HiddenState = not self.HiddenState
@@ -501,7 +498,7 @@ class InputForm(Form):
     def ListViewResize(self, sender, e):
         sender.Columns[0].Width = sender.ClientSize.Width
 
-    def ShowDialog(self, title, mainContent, allowCancellation=True):
+    def ShowTaskDialog(self, title, mainContent, allowCancellation=True):
         """Hiển thị TaskDialog với các tham số tùy chỉnh."""
         dialog = TaskDialog(title)
         dialog.MainContent = mainContent
@@ -515,17 +512,26 @@ class InputForm(Form):
         return dialog.Show()
 
     def BtnSaveClick(self, sender, e):
-        itemChecked = [item.Text for item in self._listView1.Items if item.Checked]
+        """Lưu tất cả các giá trị được chọn, kể cả những mục bị ẩn do bộ lọc tìm kiếm."""
+        allCheckedItems = set()  # Tạo tập hợp để lưu tất cả các mục đã check
+
+        # ✅ Duyệt qua danh sách gốc `ListViewItems` để lấy tất cả các mục
+        for idx, item in self.ListViewItems:
+            if item.Checked:
+                allCheckedItems.add(item.Text)  # Lưu lại các mục đã được check
+
         selectedComboBoxItem = self._comboBox1.SelectedItem if self._comboBox1.SelectedItem else ""
 
         configData = {
-            "listViewItem": itemChecked,
+            "listViewItem": list(allCheckedItems),  # Lưu tất cả các mục đã check
             "selectedComboBox": selectedComboBoxItem
         }
 
-        if len(itemChecked) == 0:
-            warning = self.ShowDialog("Warning",
-                                      "The script will be reset and can not run until you select at lesast one category tag")
+        if len(allCheckedItems) == 0:
+            warning = self.ShowTaskDialog(
+                "Warning",
+                "The script will be reset and cannot run until you select at least one category tag."
+            )
             if warning == TaskDialogResult.Cancel:
                 return
             elif warning == TaskDialogResult.Ok:
@@ -535,6 +541,7 @@ class InputForm(Form):
             self.SaveConfigSetting(configData)
             Alert(title="Notification", content="Data was saved")
             self.Close()
+
 
     def SaveConfigSetting(self, data):
         """Lưu config vào file JSON."""
@@ -580,4 +587,5 @@ if __name__ == "__main__":
 
     # Tạo và hiển thị form
     form = InputForm(sortedData)
-    Application.Run(form)
+    # Application.Run(form)
+    form.ShowDialog()
