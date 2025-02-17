@@ -569,8 +569,12 @@ class MainForm(Form):
         if raw:
             Alert("Can not find any {} in view.\nAll Elements Of {} Have Been Tagged.".format(raw, result))
         else:
-            if self.taggedCategory:
-                Alert("All Elements Of {} Have Been Tagged.".format(result))
+            if len(self.taggedCategory) != 0:
+                Alert("All categories of {} have been successfully tagged.".format(result))
+            else:
+                Alert("All categories have been processed, but no elements were fully tagged.")
+
+
 
 
     def PictureBoxClick(self, sender, e):
