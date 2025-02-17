@@ -7,7 +7,6 @@ import json
 import os
 import math  # Standard Python math library
 
-
 # Excel Library
 clr.AddReference('Microsoft.Office.Interop.Excel')
 from Microsoft.Office.Interop import Excel
@@ -157,11 +156,12 @@ def GetTypeNameOfElement(ele):
     return ele.Name
 
 
-def ProcessCategoryTag(lstCate):
+def TaggedOrNotTagged(lstCate):
     result = []
     for cate in lstCate:
         getAll = AllElementOfCategoryInView(view, cate)
         if len(getAll) == 0:
+
             result.append(False)
         else:
             result.append(True)
@@ -184,11 +184,7 @@ def save_config(data):
     with open(CONFIG_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-
-
-
     """----------------------MAIN CODE----------------------------"""
-
 
 
 if __name__ == "__main__":
@@ -210,7 +206,7 @@ if __name__ == "__main__":
         else:
             selectCateName = config.get('listViewItem', [])
 
-            processCateTag = ProcessCategoryTag(selectCateName)
+            processCateTagta = TaggedOrNotTagged(selectCateName)
 
             allTagOfCategoryInView = AllElementOfCategoryInView(view, selectCateName)
             taggedElement = Flatten_lv3([GetTaggedElement(tag) for tag in allTagOfCategoryInView])  # List 2
@@ -260,16 +256,15 @@ if __name__ == "__main__":
 
                     """-------------RUN FORM-------------"""
                     f = MainForm(notTaggedCategory, notTaggedFamilyRaw, notTaggedTypeRaw, notTaggedIdRaw,
-                                 processCateTag,
-                                 selectCateName, notTaggedCategoryGroup, data)
+                                 processCateTagta,
+                                 selectCateName, notTaggedCategoryGroup, taggedCategory, data)
 
                     # Application.Run(f)
                     f.Show()
 
-
-                if len(taggedCategory) != 0:
-                    result = ", ".join(map(str, taggedCategory))
-                    Alert('All Elements Of {} Have Been Tagged.'.format(result))
+                # if len(taggedCategory) != 0:
+                #     result = ", ".join(map(str, taggedCategory))
+                #     Alert('All Elements Of {} Have Been Tagged.'.format(result))
 
             except Exception as exx:
                 TaskDialog.Show("Failed", "Warning: {}".format(exx))  # Corrected string formatting

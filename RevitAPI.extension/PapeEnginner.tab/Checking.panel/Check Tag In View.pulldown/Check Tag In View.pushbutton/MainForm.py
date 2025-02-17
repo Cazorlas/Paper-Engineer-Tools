@@ -58,6 +58,7 @@ uiview = [x for x in uiviews if x.ViewId == view.Id][0]
 
 class MainForm(Form):
     def __init__(self, category, familyName, typeName, Id, processCateTag, selectCateName, notTaggedCategoryGroup,
+                 taggedCategory,
                  data):
         self.category = category
         self.familyName = familyName
@@ -67,6 +68,7 @@ class MainForm(Form):
         self.processCateTag = processCateTag
         self.selectCateName = selectCateName
         self.sheetsTitle = notTaggedCategoryGroup
+        self.taggedCategory = taggedCategory
         self.data = data
 
         self.imageList = [
@@ -534,22 +536,42 @@ class MainForm(Form):
 
         Alert("Export Done, Please Check!")
 
-    def NoTagBtnClick(self, sender, e):
+    # def NoTagBtnClick(self, sender, e):
+    #     # if len(self.taggedCategory) != 0:
+    #     #     result = ", ".join(map(str, self.taggedCategory))
+    #     #     Alert('All Elements Of {} Have Been Tagged.'.format(result))
+    #
+    #     result = ", ".join(map(str, self.taggedCategory))
+    #     if self.processCateTag:
+    #         raw = ""
+    #         for bool, cate in zip(self.processCateTag, self.selectCateName):
+    #             if bool == False:
+    #                 if raw == "":
+    #                     raw += cate
+    #                 else:
+    #                     raw += ", " + cate
+    #         if raw == "":
+    #             Alert("Nothing to export.\nAll Elements Of {} Have Been Tagged.".format(result))
+    #         else:
+    #             Alert("Can not find any {} in view.\nAll Elements Of {} Have Been Tagged.".format(raw,result))
+    #     else:
+    #         Alert("Can not find any not tagged categories.\nAll Elements Of {} Have Been Tagged.".format(result))
 
-        if self.processCateTag:
-            raw = ""
-            for bool, cate in zip(self.processCateTag, self.selectCateName):
-                if bool == False:
-                    if raw == "":
-                        raw += cate
-                    else:
-                        raw += ", " + cate
-            if raw == "":
-                Alert("Nothing to export")
-            else:
-                Alert('Can not find any {} in view.'.format(raw))
+    def NoTagBtnClick(self, sender, e):
+        result = ", ".join(map(str, self.taggedCategory))
+
+        if not self.processCateTag:
+            Alert("Can not find any not tagged categories.\nAll Elements Of {} Have Been Tagged.".format(result))
+            return
+
+        raw = ", ".join(cate for bool, cate in zip(self.processCateTag, self.selectCateName) if not bool)
+
+        if raw:
+            Alert("Can not find any {} in view.\nAll Elements Of {} Have Been Tagged.".format(raw, result))
         else:
-            Alert('Do not find any not tagged categories')
+            if self.taggedCategory:
+                Alert("All Elements Of {} Have Been Tagged.".format(result))
+
 
     def PictureBoxClick(self, sender, e):
         imagePath = os.path.join(__commandpath__, "image.jpg")
@@ -593,4 +615,3 @@ class MainForm(Form):
 
     def CloseBtnClick(self, sender, e):
         self.Close()
-
