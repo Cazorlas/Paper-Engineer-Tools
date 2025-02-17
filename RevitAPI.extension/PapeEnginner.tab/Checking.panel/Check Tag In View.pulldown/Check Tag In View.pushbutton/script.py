@@ -7,7 +7,8 @@ import json
 import os
 import math  # Standard Python math library
 
-# Excel Libraary
+
+# Excel Library
 clr.AddReference('Microsoft.Office.Interop.Excel')
 from Microsoft.Office.Interop import Excel
 
@@ -40,6 +41,8 @@ import RevitServices
 from RevitServices.Persistence import DocumentManager  # Document management in Revit
 from RevitServices.Transactions import TransactionManager  # Transaction management
 
+import threading
+import System.Threading
 import System.Windows.Forms
 from System.Windows.Forms import Application
 
@@ -57,6 +60,7 @@ selection = uidoc.Selection
 Application.EnableVisualStyles()
 
 """ ----------------------FUNCTIONS----------------------------"""
+
 
 def Flatten_lv3(lst):
     return [i for subLst in lst for i in subLst]
@@ -163,6 +167,7 @@ def ProcessCategoryTag(lstCate):
             result.append(True)
     return result
 
+
 def load_config():
     """Đọc config từ file JSON, nếu không có thì dùng giá trị mặc định."""
     if os.path.exists(CONFIG_FILE):
@@ -179,7 +184,11 @@ def save_config(data):
     with open(CONFIG_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
+
+
+
     """----------------------MAIN CODE----------------------------"""
+
 
 
 if __name__ == "__main__":
@@ -196,11 +205,10 @@ if __name__ == "__main__":
         config = load_config()
         checkedItems = config.get('listViewItem', [])
 
-        if len(checkedItems) ==0:
+        if len(checkedItems) == 0:
             Alert(content="Please run Setting First", title="Warning", exit=True)
         else:
             selectCateName = config.get('listViewItem', [])
-
 
             processCateTag = ProcessCategoryTag(selectCateName)
 
@@ -250,15 +258,16 @@ if __name__ == "__main__":
                             for
                             family, typeName, ids in zip(notTaggedFamily, notTaggedType, notTaggedId)]
 
-                    """-----------RUN FORM-----------"""
+                    """-------------RUN FORM-------------"""
                     f = MainForm(notTaggedCategory, notTaggedFamilyRaw, notTaggedTypeRaw, notTaggedIdRaw,
                                  processCateTag,
                                  selectCateName, notTaggedCategoryGroup, data)
-                    Application.Run(f)
+                    f.Show()
+
 
                 if len(taggedCategory) != 0:
                     result = ", ".join(map(str, taggedCategory))
-                    print('All Elements Of  {} Have Been Tagged.'.format(result))
+                    Alert('All Elements Of {} Have Been Tagged.'.format(result))
 
             except Exception as exx:
                 TaskDialog.Show("Failed", "Warning: {}".format(exx))  # Corrected string formatting

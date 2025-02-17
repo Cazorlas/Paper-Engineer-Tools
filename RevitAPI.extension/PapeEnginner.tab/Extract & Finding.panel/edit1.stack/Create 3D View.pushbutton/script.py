@@ -1,6 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+__title__ = 'Create 3D View'
+__doc__ = """Version = 1.0
+📖 Description
+This tool allows you to create 3D views in Revit, include model and linked elements.
+------------------------------------------------------------------
+🚀 How to Use
+1.Select the elements you want to create a 3D view.
+2.Click the script icon to create 3D view.
+------------------------------------------------------------------
+⚠ Warnings & Limitations
+- This only works with Revit 2023 or later.
+- Only works with visible elements in the active view.  
+------------------------------------------------------------------
+📜 Copyright & License
+© 2024 Paper Engineer. All rights reserved.  
+Please give proper credit if you share or use this script in your project.
+"""
+__authors__ = ["Paper Engineer"]
+__min_revit_ver__= 2023
+__helpurl__ = "https://www.youtube.com/@paper.engineer"
 
 # TODO: import library
 import clr  # Common Language Runtime for .NET
@@ -86,7 +105,10 @@ def GetSumBoundingBox(references, offset=1):
     boundingBoxes = []
     for ref in references:
         # Get the element from the Reference
-        element = doc.GetElement(ref.ElementId)
+        if hasattr(ref, "ElementId"):
+            element = doc.GetElement(ref.ElementId)
+        else:
+            element = doc.GetElement(ref)
 
         # Check if it is a RevitLinkInstance
         if isinstance(element, RevitLinkInstance):
@@ -146,8 +168,15 @@ def Create3dView(doc, viewName):
 
 try:
     # Get the list of References from the current selection
-    references = selection.GetReferences()
+    # references = selection.GetReferences()
     # references = selection.GetElementIds()
+
+    try:
+        references = selection.GetReferences()
+    except Exception:
+        references = list(selection.GetElementIds())
+
+
     if not references:
         ShowNotification("Error", "No Selection Element")
 
@@ -157,7 +186,8 @@ try:
         sumBox = GetSumBoundingBox(references)
 
         # Specify the name for the 3D view
-        viewName = "{3D - " + currentUser + "}"
+        # viewName = "{3D - " + currentUser + "}"
+        viewName = "3D - View"
 
         # Create 3D View
         if view.ViewType == ViewType.ThreeD:
@@ -175,7 +205,7 @@ try:
         uidoc.RequestViewChange(view3d)
         uidoc.RefreshActiveView()
         # If you want to Zoom to Element. Activate the line below
-        # uiview.ZoomAndCenterRectangle(sumBox.Min, sumBox.Max)
+        uiview.ZoomAndCenterRectangle(sumBox.Min, sumBox.Max)
 
 
 except Autodesk.Revit.Exceptions.OperationCanceledException:

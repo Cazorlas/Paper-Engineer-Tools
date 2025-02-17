@@ -34,7 +34,7 @@ from RevitServices.Transactions import TransactionManager  # Manages transaction
 
 # ----------------------FUNCTION----------------------------
 # TODO: Create functions
-def get_parameters_info(params, version):
+def GetParametersInfo(params, version):
     """ Get information parameters of elements"""
     # Initialize lists to store parameter information
     pid, pname, guid, pgroup, ptype, visible, userCreated, builtInParam, utype, dutype, stype, isshared, isreadonly, usermodifiable, hasvalue, value = \
@@ -89,7 +89,7 @@ def get_parameters_info(params, version):
     return pid, pname, pgroup
 
 
-def bin_data(data, criteria, toSort=True):
+def BinData(data, criteria, toSort=True):
     """Functions to group element by key"""
     bins = []
     sorted_data = []
@@ -128,7 +128,7 @@ class MyOption(forms.TemplateListItem):
         return "{}".format(self.item)  # Hiển thị tên danh mục trong danh sách
 
 
-def select_parameters(params, bins, sorted_data):
+def SelectParameters(params, bins, sorted_data):
     """Function to select parameters based on user input"""
     ops = {}
     config = script.get_config(EXEC_PARAMS.command_name)
@@ -152,13 +152,13 @@ def select_parameters(params, bins, sorted_data):
     config.selected_items = res if res else []
     script.save_config()
 
-    selected_params = []
+    selectedParams = []
 
     if res:
         for selected_item in res:
             if selected_item == 'All':
                 # If 'All' is selected, add all parameters
-                selected_params = params
+                selectedParams = params
             else:
                 # Otherwise, handle specific groups
                 for param_group, param_names in ops.items():
@@ -167,15 +167,12 @@ def select_parameters(params, bins, sorted_data):
                             param_group_name = LabelUtils.GetLabelFor(param.Definition.ParameterGroup)
                             # Match both name and group
                             if param.Definition.Name == selected_item and param_group_name == param_group:
-                                selected_params.append(param)
+                                selectedParams.append(param)
                                 break
 
-    return selected_params
+    return selectedParams
 
-
-
-
-def match_parameter_value(receive_eles, selected_get_params):
+def MatchParameterValue(receive_eles, selected_get_params):
     """ Match parameter values for selected elements """
     with Transaction(doc, "Match Parameter Value") as t:
         t.Start()
@@ -207,6 +204,7 @@ app = __revit__.Application
 DB = Autodesk.Revit.DB
 output = script.get_output()
 unit = doc.GetUnits()
+selection = uidoc.Selection
 version = int(app.VersionNumber)
 
 # ----------------------MAIN CODE----------------------------
@@ -246,28 +244,28 @@ with TransactionGroup(doc, 'Match Parameters') as tg:
 try:
     # TODO: Select element to get parameter and get parameter to transfer
     # Select an element to get parameters
-    get_ref = uidoc.Selection.PickObject(ObjectType.Element, 'Select element to get')
-    get_ele = doc.GetElement(get_ref.ElementId)
+    getRef = uidoc.Selection.PickObject(ObjectType.Element, 'Select element to get')
+    getEle = doc.GetElement(getRef.ElementId)
 
     # Retrieve and organize parameter information
-    get_params = get_ele.GetOrderedParameters()
-    pid, pname, pgroup = get_parameters_info(get_params, version)
+    getParams = getEle.GetOrderedParameters()
+    pId, pName, pGroup = GetParametersInfo(getParams, version)
 
     # Sort data into bins
-    sorted_data = bin_data(pname, pgroup, toSort=False)
+    sortedData = BinData(pName, pGroup, toSort=False)
 
     # Select parameters based on user input
-    selected_get_params = select_parameters(get_params, sorted_data.keys(), sorted_data.values())
-    if not selected_get_params:
+    selectedGetParams = SelectParameters(getParams, sortedData.keys(), sortedData.values())
+    if not selectedGetParams:
         sys.exit()
 
     # TODO: Select element to receive parameter do Transaction
     # Select elements to receive parameters
-    receive_ref = uidoc.Selection.PickObjects(ObjectType.Element, 'Select elements to match')
-    receive_eles = [doc.GetElement(ref.ElementId) for ref in receive_ref]
+    receiveRef = uidoc.Selection.PickObjects(ObjectType.Element, 'Select elements to match')
+    receiveEles = [doc.GetElement(ref.ElementId) for ref in receiveRef]
 
     # Match parameter values
-    match_parameter_value(receive_eles, selected_get_params)
+    MatchParameterValue(receiveEles, selectedGetParams)
 
 except Autodesk.Revit.Exceptions.OperationCanceledException:
     pass

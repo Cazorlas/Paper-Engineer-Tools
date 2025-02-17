@@ -56,16 +56,16 @@ def ShowNotification(title, content):
     notiForm.ShowDialog()
 
 
-def ShowDataForm(document, lstEleId):
-    dataForm = DataForm(document, lstEleId)
-    # Get the Revit main window handle and assign as owner
-    revitWindowHandle = System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle
-    hostWindow = System.Windows.Forms.Control.FromHandle(revitWindowHandle)
-    dataForm.Owner = hostWindow  # Set Revit as the form owner
-
-    # Show the form modelessly
-    dataForm.Show()
-    # f.TopMost = True  # Keep the form on top of Revit
+# def ShowDataForm(document, lstEleId):
+#     dataForm = DataForm(document, lstEleId)
+#     # Get the Revit main window handle and assign as owner
+#     revitWindowHandle = System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle
+#     hostWindow = System.Windows.Forms.Control.FromHandle(revitWindowHandle)
+#     dataForm.Owner = hostWindow  # Set Revit as the form owner
+#
+#     # Show the form modelessly
+#     dataForm.Show()
+#     # f.TopMost = True  # Keep the form on top of Revit
 
 
 """----------------------------------All Forms------------------------------------------------"""

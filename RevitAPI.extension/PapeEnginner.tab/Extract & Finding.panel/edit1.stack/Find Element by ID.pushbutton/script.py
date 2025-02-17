@@ -31,6 +31,9 @@ import Revit  # Import Revit namespace in RevitNodes
 clr.ImportExtensions(Revit.Elements)
 clr.ImportExtensions(Revit.GeometryConversion)
 
+import System.Windows.Forms
+from System.Windows.Forms import Application
+
 clr.AddReference("RevitServices")
 import RevitServices
 from RevitServices.Persistence import DocumentManager  # Document management in Revit
@@ -49,6 +52,8 @@ selection = uidoc.Selection
 
 uiviews = uidoc.GetOpenUIViews()
 uiview = [x for x in uiviews if x.ViewId == view.Id][0]
+# Đặt lệnh này NGAY SAU khi import System.Windows.Forms
+Application.EnableVisualStyles()
 
 # ------Note: __revit__ = Autodesk.Revit.UI.UIApplication
 """----------------------FUNCTION----------------------------"""
@@ -172,7 +177,7 @@ try:
     openForm = True
     while openForm:
         f = MainForm(nameModelLink)
-        f.Show()
+        f.ShowDialog()
 
         # User cancel
         if f.DialogResult != System.Windows.Forms.DialogResult.OK:
@@ -201,7 +206,9 @@ try:
 
 
                 else:
-                    ShowDataForm(doc, lstEleId)
+                    dataForm = DataForm(doc, lstEleId)
+                    Application.Run(dataForm)
+                    # ShowDataForm(doc, lstEleId)
                     selection.SetElementIds(lstICollection)
                     openForm = False
 
@@ -228,7 +235,9 @@ try:
 
 
                     else:
-                        ShowDataForm(docLink, lstEleId)
+                        dataForm = DataForm(doc, lstEleId)
+                        Application.Run(dataForm)
+                        # ShowDataForm(docLink, lstEleId)
                         SelectLinkELementById(docLink, linkSelected, lstEleId)
                         openForm = False
 
