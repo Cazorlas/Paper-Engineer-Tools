@@ -262,6 +262,8 @@ if __name__ == "__main__":
                     f = MainForm(notTaggedCategory, notTaggedFamilyRaw, notTaggedTypeRaw, notTaggedIdRaw,
                                  processCateTag,
                                  selectCateName, notTaggedCategoryGroup, data)
+
+                    # Application.Run(f)
                     f.Show()
 
 
