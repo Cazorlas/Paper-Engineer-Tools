@@ -434,15 +434,23 @@ class InputForm(Form):
 
 
     def BtnExportClick(self, sender, e):
-        itemChecked = [item.Text for item in self._listView1.Items if item.Checked]
+        """Lưu tất cả các giá trị được chọn, kể cả những mục bị ẩn do bộ lọc tìm kiếm."""
+        allCheckedItems = set()  # Tạo tập hợp để lưu tất cả các mục đã check
+
+        # ✅ Duyệt qua danh sách gốc `ListViewItems` để lấy tất cả các mục
+        for idx, item in self.ListViewItems:
+            if item.Checked:
+                allCheckedItems.add(item.Text)  # Lưu lại các mục đã được check
+
+
         selectedComboBoxItem = self._comboBox1.SelectedItem if self._comboBox1.SelectedItem else ""
 
         configData = {
-            "listViewItem": itemChecked,
+            "listViewItem": list(allCheckedItems),
             "selectedComboBox": selectedComboBoxItem
         }
 
-        if len(itemChecked) > 0:
+        if len(allCheckedItems) > 0:
             fileSave = forms.save_file(file_ext='json',default_name="Data",restore_dir= True,title= "Export Data")
 
             if fileSave:
