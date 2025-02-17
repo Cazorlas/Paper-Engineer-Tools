@@ -181,7 +181,7 @@ class MainForm(Form):
         self._noTagBtn.Name = "noTagBtn"
         self._noTagBtn.Size = System.Drawing.Size(84, 34)
         self._noTagBtn.TabIndex = 3
-        self._noTagBtn.Text = "Export No Tagged"
+        self._noTagBtn.Text = "Export Tag Data"
         self._noTagBtn.UseVisualStyleBackColor = True
         self._noTagBtn.Click += self.NoTagBtnClick
 
