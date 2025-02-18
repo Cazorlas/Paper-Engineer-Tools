@@ -231,9 +231,15 @@ if __name__ == "__main__":
             taggedCategory = list(set(cateNameOfTaggedElement) - set(notTaggedCategoryGroup))
 
             try:
+                # print(len(selectCateName))
+                # print(len(notTaggedCategoryGroup))
+                # print(len(taggedCategory))
+                # print(len(allTagOfCategoryInView))
                 if len(allTagOfCategoryInView) == 0:
-                    Alert('All Elements Have Not Been Tagged.', exit=True)
-                elif len(notTaggedCategoryGroup) > 0:
+                    Alert('No Found Tag of Category you choose in the model', exit=True)
+                elif len(taggedCategory) == len(selectCateName):
+                    Alert('All Category have been tagged', exit=True)
+                elif len(notTaggedCategoryGroup) > 0 or len(selectCateName) > len(taggedCategory):
                     notTaggedCategory = [GetElementCategory(doc.GetElement(Id)) for Id in notTaggedElementId]
                     notTaggedFamilyRaw = [GetFamilyNameOfElement(doc.GetElement(Id)) for Id in notTaggedElementId]
                     notTaggedTypeRaw = [GetTypeNameOfElement(doc.GetElement(Id)) for Id in notTaggedElementId]
@@ -262,9 +268,7 @@ if __name__ == "__main__":
                     # Application.Run(f)
                     f.Show()
 
-                # if len(taggedCategory) != 0:
-                #     result = ", ".join(map(str, taggedCategory))
-                #     Alert('All Elements Of {} Have Been Tagged.'.format(result))
+
 
             except Exception as exx:
                 TaskDialog.Show("Failed", "Warning: {}".format(exx))  # Corrected string formatting
