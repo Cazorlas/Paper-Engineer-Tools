@@ -567,7 +567,10 @@ class MainForm(Form):
         raw = ", ".join(cate for bool, cate in zip(self.processCateTag, self.selectCateName) if not bool)
 
         if raw:
-            Alert("Can not find any {} in view.\nAll Elements Of {} Have Been Tagged.".format(raw, result))
+            if len(self.taggedCategory) != 0:
+                Alert("Can not find any {} in view.\nAll Elements Of {} Have Been Tagged.".format(raw, result))
+            else:
+                Alert("Can not find any {} in view.".format(raw))
         else:
             if len(self.taggedCategory) != 0:
                 Alert("All categories of {} have been successfully tagged.".format(result))

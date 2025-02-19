@@ -91,23 +91,23 @@ def GetParametersInfo(params, version):
 
 def BinData(data, criteria, toSort=True):
     """Functions to group element by key"""
-    bins = []
+    keys = []
     sorted_data = []
 
     for i in range(1, len(criteria)):
-        if criteria[i] not in bins:
-            bins.append(criteria[i])
+        if criteria[i] not in keys:
+            keys.append(criteria[i])
             sorted_data.append([])
 
     if toSort:
-        bins.sort()
+        keys.sort()
 
     for i in range(len(criteria)):
-        for j in range(len(bins)):
-            if criteria[i] == bins[j]:
+        for j in range(len(keys)):
+            if criteria[i] == keys[j]:
                 sorted_data[j].append(data[i])
 
-    return dict(zip(bins, sorted_data))
+    return dict(zip(keys, sorted_data))
 
 # Định nghĩa lớp MyOption để tạo danh sách checkbox với tên tùy chọn
 class MyOption(forms.TemplateListItem):
