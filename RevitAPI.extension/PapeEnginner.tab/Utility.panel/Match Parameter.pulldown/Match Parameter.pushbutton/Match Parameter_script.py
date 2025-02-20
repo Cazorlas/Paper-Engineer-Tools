@@ -89,25 +89,46 @@ def GetParametersInfo(params, version):
     return pid, pname, pgroup
 
 
-def BinData(data, criteria, toSort=True):
+# def BinData(data, keys, toSort=True):
+#     """Functions to group element by key"""
+#     groupKeys = []
+#     sortedData = []
+#
+#     for i in range(1, len(keys)):
+#         if keys[i] not in groupKeys:
+#             groupKeys.append(keys[i])
+#             sortedData.append([])
+#
+#     if toSort:
+#         groupKeys.sort()
+#
+#     for i in range(len(keys)):
+#         for j in range(len(groupKeys)):
+#             if keys[i] == groupKeys[j]:
+#                 sortedData[j].append(data[i])
+#
+#     return dict(zip(groupKeys, sortedData))
+
+def GroupElementsByKeys(items, keys, toSort=True):
     """Functions to group element by key"""
-    keys = []
-    sorted_data = []
+    # Create unique key lists
+    uniqueKeys = list(set(keys))
 
-    for i in range(1, len(criteria)):
-        if criteria[i] not in keys:
-            keys.append(criteria[i])
-            sorted_data.append([])
+    # Create empty lists according to unique keys
+    lstGroup = []
+    for i in range(len(uniqueKeys)):
+        lstGroup.append([])
 
-    if toSort:
-        keys.sort()
+    # Get index of the input keys in unique key lists
+    ind_lst = []
+    for key in keys:
+        ind_lst.append(uniqueKeys.index(key))
 
-    for i in range(len(criteria)):
-        for j in range(len(keys)):
-            if criteria[i] == keys[j]:
-                sorted_data[j].append(data[i])
+    # Group by key
+    for item, ind in zip(items, ind_lst):
+        lstGroup[ind].append(item)
 
-    return dict(zip(keys, sorted_data))
+    return lstGroup, uniqueKeys
 
 # Định nghĩa lớp MyOption để tạo danh sách checkbox với tên tùy chọn
 class MyOption(forms.TemplateListItem):
@@ -252,20 +273,22 @@ try:
     pId, pName, pGroup = GetParametersInfo(getParams, version)
 
     # Sort data into bins
-    sortedData = BinData(pName, pGroup, toSort=False)
+    sortedData = GroupElementsByKeys(pName, pGroup, toSort=False)
 
-    # Select parameters based on user input
-    selectedGetParams = SelectParameters(getParams, sortedData.keys(), sortedData.values())
-    if not selectedGetParams:
-        sys.exit()
+    print(sortedData)
 
-    # TODO: Select element to receive parameter do Transaction
-    # Select elements to receive parameters
-    receiveRef = uidoc.Selection.PickObjects(ObjectType.Element, 'Select elements to match')
-    receiveEles = [doc.GetElement(ref.ElementId) for ref in receiveRef]
-
-    # Match parameter values
-    MatchParameterValue(receiveEles, selectedGetParams)
+    # # Select parameters based on user input
+    # selectedGetParams = SelectParameters(getParams, sortedData.keys(), sortedData.values())
+    # if not selectedGetParams:
+    #     sys.exit()
+    #
+    # # TODO: Select element to receive parameter do Transaction
+    # # Select elements to receive parameters
+    # receiveRef = uidoc.Selection.PickObjects(ObjectType.Element, 'Select elements to match')
+    # receiveEles = [doc.GetElement(ref.ElementId) for ref in receiveRef]
+    #
+    # # Match parameter values
+    # MatchParameterValue(receiveEles, selectedGetParams)
 
 except Autodesk.Revit.Exceptions.OperationCanceledException:
     pass
