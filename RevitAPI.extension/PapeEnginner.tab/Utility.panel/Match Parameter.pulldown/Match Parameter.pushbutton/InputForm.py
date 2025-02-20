@@ -573,19 +573,19 @@ class InputForm(Form):
                 self._comboBox1.SelectedItem = selectedComboBoxItem
 
 
-if __name__ == "__main__":
-    def AllAnnotationCategories():
-        allCategories = doc.Settings.Categories
-
-        return [cat for cat in allCategories if cat.CategoryType == CategoryType.Annotation]
-
-
-    annotationCategories = AllAnnotationCategories()
-    annotationCategoriesName = [cate.Name for cate in annotationCategories]
-    annotationCategoriesDict = dict(zip(annotationCategoriesName, annotationCategories))
-    sortedData = sorted(annotationCategoriesName)
-
-    # Tạo và hiển thị form
-    form = InputForm(sortedData)
-    # Application.Run(form)
-    form.ShowDialog()
+# if __name__ == "__main__":
+#     def AllAnnotationCategories():
+#         allCategories = doc.Settings.Categories
+#
+#         return [cat for cat in allCategories if cat.CategoryType == CategoryType.Annotation]
+#
+#
+#     annotationCategories = AllAnnotationCategories()
+#     annotationCategoriesName = [cate.Name for cate in annotationCategories]
+#     annotationCategoriesDict = dict(zip(annotationCategoriesName, annotationCategories))
+#     sortedData = sorted(annotationCategoriesName)
+#
+#     # Tạo và hiển thị form
+#     form = InputForm(sortedData)
+#     # Application.Run(form)
+#     form.ShowDialog()

@@ -26,13 +26,29 @@ import Revit  # Loads in the Revit namespace in RevitNodes
 clr.ImportExtensions(Revit.Elements)
 clr.ImportExtensions(Revit.GeometryConversion)
 
+from InputForm import InputForm
+import System.Windows.Forms
+from System.Windows.Forms import Application
+
 clr.AddReference("RevitServices")
 import RevitServices
 from RevitServices.Persistence import DocumentManager  # Tracks the document attached to Dynamo
 from RevitServices.Transactions import TransactionManager  # Manages transactions in Dynamo
 
+"""----------------------INPUT----------------------------"""
+# Prepare variable and input
+doc = __revit__.ActiveUIDocument.Document
+view = doc.ActiveView
+uidoc = __revit__.ActiveUIDocument
+app = __revit__.Application
+DB = Autodesk.Revit.DB
+output = script.get_output()
+unit = doc.GetUnits()
+selection = uidoc.Selection
+version = int(app.VersionNumber)
+Application.EnableVisualStyles()
 
-# ----------------------FUNCTION----------------------------
+"""----------------------FUNCTION----------------------------"""
 # TODO: Create functions
 def GetParametersInfo(params, version):
     """ Get information parameters of elements"""
@@ -88,110 +104,77 @@ def GetParametersInfo(params, version):
 
     return pid, pname, pgroup
 
-
-# def BinData(data, keys, toSort=True):
-#     """Functions to group element by key"""
-#     groupKeys = []
-#     sortedData = []
-#
-#     for i in range(1, len(keys)):
-#         if keys[i] not in groupKeys:
-#             groupKeys.append(keys[i])
-#             sortedData.append([])
-#
-#     if toSort:
-#         groupKeys.sort()
-#
-#     for i in range(len(keys)):
-#         for j in range(len(groupKeys)):
-#             if keys[i] == groupKeys[j]:
-#                 sortedData[j].append(data[i])
-#
-#     return dict(zip(groupKeys, sortedData))
-
 def GroupElementsByKeys(items, keys, toSort=True):
-    """Functions to group element by key"""
-    # Create unique key lists
-    uniqueKeys = list(set(keys))
+    """Functions to group elements by key with optional sorting
 
-    # Create empty lists according to unique keys
-    lstGroup = []
-    for i in range(len(uniqueKeys)):
-        lstGroup.append([])
+    Args:
+        items (list): List of items to be grouped
+        keys (list): List of keys for grouping
+        toSort (bool): If True, sort the unique keys; if False, maintain original order
 
-    # Get index of the input keys in unique key lists
-    ind_lst = []
-    for key in keys:
-        ind_lst.append(uniqueKeys.index(key))
+    Returns:
+        tuple: (grouped_lists, unique_keys) where grouped_lists contains grouped items
+              and unique_keys is the list of unique keys
+    """
+    # Create a dictionary for faster grouping
+    groupDict = {}
 
-    # Group by key
-    for item, ind in zip(items, ind_lst):
-        lstGroup[ind].append(item)
+    # Group items by keys using dictionary
+    for item, key in zip(items, keys):
+        if key not in groupDict:
+            groupDict[key] = []
+        groupDict[key].append(item)
 
-    return lstGroup, uniqueKeys
+    # Get unique keys
+    uniqueKeys = list(groupDict.keys())
 
-# Định nghĩa lớp MyOption để tạo danh sách checkbox với tên tùy chọn
-class MyOption(forms.TemplateListItem):
-    def __init__(self, orig_item, checked=False):
-        """
-        Gói một đối tượng (tên danh mục) vào danh sách checkbox.
+    # Sort keys if toSort is True
+    if toSort:
+        uniqueKeys.sort()
 
-        Args:
-            orig_item (str): Tên danh mục
-            checked (bool): Trạng thái ban đầu của checkbox (mặc định là False)
+    # Create grouped lists in the order of unique_keys
+    groupedLists = [groupDict[key] for key in uniqueKeys]
 
-        """
-        super(MyOption, self).__init__(orig_item, checked=checked)
-        self.item = orig_item  # Lưu trữ danh mục ban đầu
+    # return groupedLists, uniqueKeys
+    return groupDict
 
-    @property
-    def name(self):
-        return "{}".format(self.item)  # Hiển thị tên danh mục trong danh sách
+def SelectParameters(params, groupKeys, data):
+    """Function to select parameters based on user input."""
 
+    f = InputForm(params)
+    # Application.Run(f)
 
-def SelectParameters(params, bins, sorted_data):
-    """Function to select parameters based on user input"""
     ops = {}
-    config = script.get_config(EXEC_PARAMS.command_name)
-    previousSelectedItems = config.get_option('selected_items', [])
 
     # Group parameters by their group names
-    for i in range(len(bins)):
-        group = bins[i]
-        params_in_group = sorted_data[i]  # Get the list of parameters for the current group
-        ops[group] = params_in_group  # Map the group to its parameters
+    for i, group in enumerate(groupKeys):
+        groupedData = data[i]
+        ops[group] = [param.Definition.Name for param in groupedData]
 
-    # Add 'All' group
-    all_params = [param.Definition.Name for param in params]
-    # ops['All'] = all_params
-    ops['All'] = [MyOption(param, checked= param in previousSelectedItems) for param in all_params]
+    print(ops)
 
-    res = forms.SelectFromList.show(ops,
-                                    title='MultiGroup List',
-                                    group_selector_title='Select Parameter Group:',
-                                    multiselect=True)
-    config.selected_items = res if res else []
-    script.save_config()
 
-    selectedParams = []
+    # # Group parameters by their group names
+    # for i, group in enumerate(groupKeys):
+    #     params_in_group = data[i]
+    #     ops[group] = [MyOption(param.Definition.Name) for param in params_in_group]
+    #
+    # # Show selection dialog
+    # selectedItems = forms.SelectFromList.show(ops,
+    #                                           title='Select Parameters',
+    #                                           group_selector_title='Parameter Group:',
+    #                                           multiselect=True)
+    #
+    # selectedParams = []
+    # if selectedItems:
+    #     for sel in selectedItems:
+    #         for param_group, param_names in ops.items():
+    #             if sel in {item.name for item in param_names}:
+    #                 selectedParams += [
+    #                     param for param in params if param.Definition.Name == sel
+    #                 ]
+    # # return selectedParams
 
-    if res:
-        for selected_item in res:
-            if selected_item == 'All':
-                # If 'All' is selected, add all parameters
-                selectedParams = params
-            else:
-                # Otherwise, handle specific groups
-                for param_group, param_names in ops.items():
-                    if selected_item in param_names:
-                        for param in params:
-                            param_group_name = LabelUtils.GetLabelFor(param.Definition.ParameterGroup)
-                            # Match both name and group
-                            if param.Definition.Name == selected_item and param_group_name == param_group:
-                                selectedParams.append(param)
-                                break
-
-    return selectedParams
 
 def MatchParameterValue(receive_eles, selected_get_params):
     """ Match parameter values for selected elements """
@@ -215,53 +198,7 @@ def MatchParameterValue(receive_eles, selected_get_params):
 
         t.Commit()
 
-
-# ----------------------INPUT----------------------------
-# Prepare variable and input
-doc = __revit__.ActiveUIDocument.Document
-view = doc.ActiveView
-uidoc = __revit__.ActiveUIDocument
-app = __revit__.Application
-DB = Autodesk.Revit.DB
-output = script.get_output()
-unit = doc.GetUnits()
-selection = uidoc.Selection
-version = int(app.VersionNumber)
-
-# ----------------------MAIN CODE----------------------------
-"""
-with TransactionGroup(doc, 'Match Parameters') as tg:
-    tg.Start()
-    try:
-        while True:
-            # TODO: Select element to get parameter and get parameter to transfer
-            # Select an element to get parameters
-            get_ref = uidoc.Selection.PickObject(ObjectType.Element, 'Select element to get')
-            get_ele = doc.GetElement(get_ref.ElementId)
-
-            # Retrieve and organize parameter information
-            get_params = get_ele.GetOrderedParameters()
-            pid, pname, pgroup = get_parameters_info(get_params, version)
-
-            # Sort data into bins
-            sorted_data = bin_data(pname, pgroup, toSort=False)
-
-            # Select parameters based on user input
-            selected_get_params = select_parameters(get_params, sorted_data.keys(), sorted_data.values())
-
-            # TODO: Select element to receive parameter do Transaction
-            # Select elements to receive parameters
-            receive_ref = uidoc.Selection.PickObjects(ObjectType.Element, 'Select elements to match')
-            receive_eles = [doc.GetElement(ref.ElementId) for ref in receive_ref]
-
-            # Match parameter values
-            match_parameter_value(receive_eles, selected_get_params)
-
-    except Autodesk.Revit.Exceptions.OperationCanceledException:
-        pass
-    tg.Assimilate()
-"""
-
+"""----------------------MAIN CODE----------------------------"""
 try:
     # TODO: Select element to get parameter and get parameter to transfer
     # Select an element to get parameters
@@ -269,18 +206,18 @@ try:
     getEle = doc.GetElement(getRef.ElementId)
 
     # Retrieve and organize parameter information
-    getParams = getEle.GetOrderedParameters()
-    pId, pName, pGroup = GetParametersInfo(getParams, version)
+    params = getEle.GetOrderedParameters()
+    pId, pName, pGroup = GetParametersInfo(params, version)
 
     # Sort data into bins
     sortedData = GroupElementsByKeys(pName, pGroup, toSort=False)
 
-    print(sortedData)
 
-    # # Select parameters based on user input
-    # selectedGetParams = SelectParameters(getParams, sortedData.keys(), sortedData.values())
-    # if not selectedGetParams:
-    #     sys.exit()
+
+    # Select parameters based on user input
+    selectedGetParams = SelectParameters(params, sortedData.keys(), sortedData.values())
+    if not selectedGetParams:
+        sys.exit()
     #
     # # TODO: Select element to receive parameter do Transaction
     # # Select elements to receive parameters
