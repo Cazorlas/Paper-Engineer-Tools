@@ -104,24 +104,42 @@ def GetAllInstancesInViewByCategories(categoryList):
 
 
 def UpdateSpaceInfo(ele):
+    roomName = None  # Khởi tạo mặc định
+    roomNumber = None
+
     with Transaction(doc, "Update Space Info") as t:
         t.Start()
-        if isinstance(ele, FamilyInstance):
-            spacePara = ele.Space.Parameters
-            DPNameSpace = ele.LookupParameter("DP Space Name")
-            DPNumberSpace = ele.LookupParameter("DP Space Number")
-            print(spacePara)
 
-            # if spacePara.Definition.Name:
-            #     valueName = spacePara.Definition.Name.AsString()
-            #     DPNameSpace.Set(valueName)
-            #     # print(valueName)
-            #
-            # if spacePara.Definition.Number:
-            #     valueNumber = spacePara.Definition.Number.AsString()
-            #     DPNumberSpace.Set(valueNumber)
+        try:
+            if isinstance(ele, FamilyInstance):
+                # Lấy vị trí của FamilyInstance
+                location = ele.Location
+                if location and isinstance(location, LocationPoint):
+                    point = location.Point
+
+                    # Tìm Space tại vị trí đó
+                    space = doc.GetRoomAtPoint(point)
+                    if space:
+                        roomName = space.get_Parameter(BuiltInParameter.ROOM_NAME).AsString() or "N/A"
+                        roomNumber = space.get_Parameter(BuiltInParameter.ROOM_NUMBER).AsString() or "N/A"
+
+                        # Lấy Parameter cần cập nhật
+                        DPNameSpace = ele.LookupParameter("DP Space Name")
+                        DPNumberSpace = ele.LookupParameter("DP Space Number")
+
+                        # Cập nhật giá trị nếu Parameter tồn tại
+                        if DPNameSpace and roomName:
+                            DPNameSpace.Set(roomName)
+                        if DPNumberSpace and roomNumber:
+                            DPNumberSpace.Set(roomNumber)
+
+        except Exception as ex:
+            print("Failed to update element {}: {}".format(ele.Id, ex))
 
         t.Commit()
+
+    return roomName, roomNumber  # Trả về giá trị, dù có hay không
+
 
 
 """----------------------MAIN CODE----------------------------"""
@@ -132,13 +150,18 @@ if __name__ == "__main__":
         # Gọi hàm để lấy các đối tượng
         instances = GetAllInstancesInViewByCategories(categoryList)
 
-        lstTest = []
-        for i in instances:
-            space = i.Space  # Lấy đối tượng không gian liên quan
-            para = space.GetOrderedParameters()
-            lstTest.append(para)
+        lstA = []
+        lstB = []
 
-        print(lstTest)
+        with TransactionGroup(doc, "Update Space Number and Space Name") as tg:
+            tg.Start()
+            for i in instances:
+                a,b = UpdateSpaceInfo(i)
+                lstA.append(a)
+                lstB.append(b)
+            tg.Assimilate()
+
+        print(lstA,lstB)
 
         # with TransactionGroup(doc, "Update Space Number and Space Name") as tg:
         #     tg.Start()
