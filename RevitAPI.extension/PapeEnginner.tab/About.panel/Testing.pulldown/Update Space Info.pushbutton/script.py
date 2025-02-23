@@ -103,79 +103,115 @@ def GetAllInstancesInViewByCategories(categoryList):
     return list(filteredElements)
 
 
+# def UpdateSpaceInfo(ele):
+#     roomName = None  # Khởi tạo mặc định
+#     roomNumber = None
+#     space = None
+#     # global phase
+#
+#     with Transaction(doc, "Update Space Info") as t:
+#         t.Start()
+#         lstCheck = []
+#         try:
+#             if isinstance(ele, FamilyInstance):
+#                 phases = doc.Phases
+#                 # phase = phases[phases.Size - 1]
+#
+#                 # Lấy vị trí của FamilyInstance
+#                 space = ele.FromRoom[phase].Id
+#                 # roomName = space.Parameter.__get__(BuiltInParameter.ROOM_NAME).AsString()
+#                 # roomNumber = space.Parameter.__get__(BuiltInParameter.ROOM_NUMBER).AsString()
+#                 # roomName = space.get_Parameter(BuiltInParameter.ROOM_NAME).AsString()
+#                 # roomNumber = space.get_Parameter(BuiltInParameter.ROOM_NUMBER).AsString()
+#
+#
+
+
 def UpdateSpaceInfo(ele):
-    roomName = None  # Khởi tạo mặc định
-    roomNumber = None
+    """
+    Update the "DP Space Name" and "DP Space Number" parameters of a given FamilyInstance based on the associated space.
+
+    Args:
+        ele (FamilyInstance): The Revit element to update.
+
+    Returns:
+        tuple: Count of successful and failed updates.
+    """
+    countSuccess = 0
+    countFail = 0
 
     with Transaction(doc, "Update Space Info") as t:
         t.Start()
-
         try:
             if isinstance(ele, FamilyInstance):
-                # Lấy vị trí của FamilyInstance
-                location = ele.Location
-                if location and isinstance(location, LocationPoint):
-                    point = location.Point
+                # space = ele.get_Space()
+                point = ele.Location.Point
+                space = doc.GetSpaceAtPoint(point)
+                if space:
+                    roomName = space.get_Parameter(BuiltInParameter.ROOM_NAME).AsString()
+                    roomNumber = space.get_Parameter(BuiltInParameter.ROOM_NUMBER).AsString()
 
-                    # Tìm Space tại vị trí đó
-                    space = doc.GetRoomAtPoint(point)
-                    if space:
-                        roomName = space.get_Parameter(BuiltInParameter.ROOM_NAME).AsString() or "N/A"
-                        roomNumber = space.get_Parameter(BuiltInParameter.ROOM_NUMBER).AsString() or "N/A"
+                    DPNameSpace = ele.LookupParameter("DP Space Name")
+                    DPNumberSpace = ele.LookupParameter("DP Space Number")
 
-                        # Lấy Parameter cần cập nhật
-                        DPNameSpace = ele.LookupParameter("DP Space Name")
-                        DPNumberSpace = ele.LookupParameter("DP Space Number")
+                    if DPNameSpace and roomName:
+                        DPNameSpace.Set(roomName)
+                    if DPNumberSpace and roomNumber:
+                        DPNumberSpace.Set(roomNumber)
 
-                        # Cập nhật giá trị nếu Parameter tồn tại
-                        if DPNameSpace and roomName:
-                            DPNameSpace.Set(roomName)
-                        if DPNumberSpace and roomNumber:
-                            DPNumberSpace.Set(roomNumber)
+                    countSuccess += 1
+                else:
+                    countFail += 1
+            else:
+                countFail += 1
 
-        except Exception as ex:
-            print("Failed to update element {}: {}".format(ele.Id, ex))
-
+        except Exception:
+            countFail += 1
         t.Commit()
 
-    return roomName, roomNumber  # Trả về giá trị, dù có hay không
+    return countSuccess, countFail
 
+
+def ShowTaskDialog(title="title", mainInstruction="MainInstruction", mainContent="MainContent", allowCancellation=True):
+    """ShowDialog with TaskDialog Information"""
+    dialog = TaskDialog(title)
+    dialog.MainInstruction = mainInstruction
+    dialog.MainContent = mainContent
+    dialog.TitleAutoPrefix = False
+    dialog.MainIcon = TaskDialogIcon.TaskDialogIconInformation
+    dialog.CommonButtons = TaskDialogCommonButtons.Ok
+    # dialog.CommonButtons = TaskDialogCommonButtons.Ok | TaskDialogCommonButtons.Cancel
+    dialog.AllowCancellation = allowCancellation
+    dialog.FooterText = '<a href="{0}">{1}</a>'.format(
+        "https://www.youtube.com/@paper.engineer", "Help")
+
+    return dialog.Show()
 
 
 """----------------------MAIN CODE----------------------------"""
 if __name__ == "__main__":
     try:
-        # Ví dụ danh sách category bạn muốn lọc
-        categoryList = ["Duct Fittings", "Duct Accessories"]
-        # Gọi hàm để lấy các đối tượng
+        # Category list to filter
+        categoryList = ["Mechanical Equipment","Air Terminals","Duct Fittings", "Duct Accessories"]
+        # Get instances of specified categories
         instances = GetAllInstancesInViewByCategories(categoryList)
 
-        lstA = []
-        lstB = []
-
+        # Process to Update Parameter
         with TransactionGroup(doc, "Update Space Number and Space Name") as tg:
             tg.Start()
+            countSuccess = 0  # count for success cases
+            countFail = 0  # count for Fail cases
             for i in instances:
-                a,b = UpdateSpaceInfo(i)
-                lstA.append(a)
-                lstB.append(b)
+                success, fail = UpdateSpaceInfo(i)
+                countSuccess += success
+                countFail += fail
             tg.Assimilate()
 
-        print(lstA,lstB)
-
-        # with TransactionGroup(doc, "Update Space Number and Space Name") as tg:
-        #     tg.Start()
-        #
-        #     for i in instances:
-        #         # UpdateSpaceInfo(i)
-        #
-        #     tg.Assimilate()
-
-        # Alert("Update Done for {} elements".format(len(instances)), "Notification")
-
-
-
-
+        ShowTaskDialog(
+            title="Notification Result",
+            mainInstruction="Update Space Info Result",
+            mainContent="Update Done for {} elements\nUpdate Fail for {} elements".format(countSuccess, countFail)
+        )
 
     # Handle the case when the user cancels the operation
     except Autodesk.Revit.Exceptions.OperationCanceledException:
