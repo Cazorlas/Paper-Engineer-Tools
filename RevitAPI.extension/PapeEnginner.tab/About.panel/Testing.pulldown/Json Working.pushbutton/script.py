@@ -89,7 +89,7 @@ def load_config():
 def save_config(data):
     """Lưu config vào file JSON."""
     with open(CONFIG_FILE, "w") as f:
-        json.dump(data, f, indent=4)
+        json.dump(data, f, ensure_ascii=False,indent=4)
 
 
 """----------------------MAIN CODE----------------------------"""

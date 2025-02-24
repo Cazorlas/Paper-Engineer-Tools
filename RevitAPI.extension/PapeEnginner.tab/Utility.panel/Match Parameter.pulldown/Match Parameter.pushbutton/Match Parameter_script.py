@@ -5,9 +5,11 @@ import clr  # This is .NET's Common Language Runtime.
 import System  # The System namespace at the root of .NET
 import math  # Math library from Python
 import sys
+import json  # Library để lưu và đọc file JSON
+import os  # Library để thao tác với hệ thống file
 
 from System.Collections.Generic import *  # Lets you handle generics.
-from pyrevit import forms, revit, script,EXEC_PARAMS
+from pyrevit import forms, revit, script, EXEC_PARAMS
 
 clr.AddReference('ProtoGeometry')  # A Dynamo library for its proxy geometry class
 from Autodesk.DesignScript.Geometry import *  # Loads everything in Dynamo's
@@ -46,10 +48,46 @@ output = script.get_output()
 unit = doc.GetUnits()
 selection = uidoc.Selection
 version = int(app.VersionNumber)
+
+CONFIG_FILE = os.path.join(os.getenv("APPDATA"), "MatchParameter.json")
 Application.EnableVisualStyles()
 
 """----------------------FUNCTION----------------------------"""
+
+
 # TODO: Create functions
+
+def load_config():
+    """Load config JSON."""
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "r") as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                return {}  # Nếu file lỗi, trả về rỗng
+    return {}  # Nếu không có file, trả về rỗng
+
+
+def save_config(data):
+    """Save config JSON."""
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+
+class MyOption(forms.TemplateListItem):
+    """Class for creating list items in the selection dialog."""
+
+    def __init__(self, orig_item, checked=False):
+        """Initialize MyOption with an item and optional checked state."""
+        super(MyOption, self).__init__(orig_item, checked=checked)
+        self.item = orig_item  # Lưu trữ danh mục ban đầu
+
+
+@property
+def name(self):
+    return "{}".format(self.item)  # Hiển thị tên danh mục trong danh sách
+
+
 def GetParametersInfo(params, version):
     """ Get information parameters of elements"""
     # Initialize lists to store parameter information
@@ -104,6 +142,7 @@ def GetParametersInfo(params, version):
 
     return pid, pname, pgroup
 
+
 def GroupElementsByKeys(items, keys, toSort=True):
     """Functions to group elements by key with optional sorting
 
@@ -138,50 +177,53 @@ def GroupElementsByKeys(items, keys, toSort=True):
     # return groupedLists, uniqueKeys
     return groupDict
 
+
 def SelectParameters(params, groupKeys, data):
-    """Function to select parameters based on user input."""
-
-    f = InputForm(params)
-    # Application.Run(f)
-
+    """Function to select parameters based on user input with synchronized ALL group."""
     ops = {}
+    # Load previous selections from config
+    config = load_config()
+    previousSelect = config.get('Parameters', [])
+
+    # Create a dictionary of parameter names to parameter objects for quick lookup
+    param_dict = {param.Definition.Name: param for param in params}
 
     # Group parameters by their group names
     for i, group in enumerate(groupKeys):
-        groupedData = data[i]
-        ops[group] = [param.Definition.Name for param in groupedData]
+        paramsGroup = data[i]
+        ops[group] = [MyOption(param, checked=param in previousSelect) for param in paramsGroup]
 
-    print(ops)
+    # Add the 'ALL' group containing all parameters
+    ops['ALL'] = [MyOption(param.Definition.Name, checked=param.Definition.Name in previousSelect) for param in params]
+
+    # Show selection dialog
+    res = forms.SelectFromList.show(ops,
+                                    title='Select Parameters',
+                                    group_selector_title='Parameter Group:',
+                                    multiselect=True)
+
+    selected_params = []
+
+    if res:
+        # Save selections to config for persistence
+        newConfig = {"Parameters": res}
+        save_config(newConfig)
+
+        # Collect selected parameters from the results
+        for selected_item in res:
+            if selected_item in param_dict:
+                selected_params.append(param_dict[selected_item])
+
+    return selected_params
 
 
-    # # Group parameters by their group names
-    # for i, group in enumerate(groupKeys):
-    #     params_in_group = data[i]
-    #     ops[group] = [MyOption(param.Definition.Name) for param in params_in_group]
-    #
-    # # Show selection dialog
-    # selectedItems = forms.SelectFromList.show(ops,
-    #                                           title='Select Parameters',
-    #                                           group_selector_title='Parameter Group:',
-    #                                           multiselect=True)
-    #
-    # selectedParams = []
-    # if selectedItems:
-    #     for sel in selectedItems:
-    #         for param_group, param_names in ops.items():
-    #             if sel in {item.name for item in param_names}:
-    #                 selectedParams += [
-    #                     param for param in params if param.Definition.Name == sel
-    #                 ]
-    # # return selectedParams
 
-
-def MatchParameterValue(receive_eles, selected_get_params):
+def MatchParameterValue(selectedEle, selectedParams):
     """ Match parameter values for selected elements """
     with Transaction(doc, "Match Parameter Value") as t:
         t.Start()
-        for e in receive_eles:
-            for sel_param in selected_get_params:
+        for e in selectedEle:
+            for sel_param in selectedParams:
                 try:
                     for rec_param in e.Parameters:
                         if rec_param.Id == sel_param.Id and not rec_param.IsReadOnly:
@@ -198,8 +240,10 @@ def MatchParameterValue(receive_eles, selected_get_params):
 
         t.Commit()
 
+
 """----------------------MAIN CODE----------------------------"""
 try:
+
     # TODO: Select element to get parameter and get parameter to transfer
     # Select an element to get parameters
     getRef = uidoc.Selection.PickObject(ObjectType.Element, 'Select element to get')
@@ -212,20 +256,18 @@ try:
     # Sort data into bins
     sortedData = GroupElementsByKeys(pName, pGroup, toSort=False)
 
-
-
     # Select parameters based on user input
     selectedGetParams = SelectParameters(params, sortedData.keys(), sortedData.values())
     if not selectedGetParams:
         sys.exit()
-    #
-    # # TODO: Select element to receive parameter do Transaction
-    # # Select elements to receive parameters
-    # receiveRef = uidoc.Selection.PickObjects(ObjectType.Element, 'Select elements to match')
-    # receiveEles = [doc.GetElement(ref.ElementId) for ref in receiveRef]
-    #
-    # # Match parameter values
-    # MatchParameterValue(receiveEles, selectedGetParams)
+
+    # TODO: Select element to receive parameter do Transaction
+    # Select elements to receive parameters
+    receiveRef = uidoc.Selection.PickObjects(ObjectType.Element, 'Select elements to match')
+    receiveEles = [doc.GetElement(ref.ElementId) for ref in receiveRef]
+
+    # Match parameter values
+    MatchParameterValue(receiveEles, selectedGetParams)
 
 except Autodesk.Revit.Exceptions.OperationCanceledException:
     pass
