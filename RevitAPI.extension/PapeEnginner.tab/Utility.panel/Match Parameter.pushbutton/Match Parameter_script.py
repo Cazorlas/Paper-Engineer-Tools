@@ -246,20 +246,23 @@ try:
     pId, pName, pGroup = GetParametersInfo(params, version)
 
     # Sort data into bins
-    sortedData = GroupElementsByKeys(pName, pGroup, toSort=False)
+    sortedData = GroupElementsByKeys(params, pGroup, toSort=False)
 
     # Select parameters based on user input
-    selectedGetParams = SelectParameters(params, sortedData.keys(), sortedData.values())
-    if not selectedGetParams:
-        sys.exit()
+    # selectedGetParams = SelectParameters(params, sortedData.keys(), sortedData.values())
+    # if not selectedGetParams:
+    #     sys.exit()
+
+    f = InputForm(params, list(sortedData.keys()), sortedData)
+    f.ShowDialog()
 
     # TODO: Select element to receive parameter do Transaction
     # Select elements to receive parameters
-    receiveRef = uidoc.Selection.PickObjects(ObjectType.Element, 'Select elements to match')
-    receiveEles = [doc.GetElement(ref.ElementId) for ref in receiveRef]
-
-    # Match parameter values
-    MatchParameterValue(receiveEles, selectedGetParams)
+    # receiveRef = uidoc.Selection.PickObjects(ObjectType.Element, 'Select elements to match')
+    # receiveEles = [doc.GetElement(ref.ElementId) for ref in receiveRef]
+    #
+    # # Match parameter values
+    # MatchParameterValue(receiveEles, selectedGetParams)
 
 except Autodesk.Revit.Exceptions.OperationCanceledException:
     pass

@@ -391,47 +391,47 @@ class InputForm(Form):
 
     def getParamKey(self, param):
         try:
-            # Ưu tiên sử dụng thuộc tính Id của parameter nếu có (đã chuyển sang chuỗi)
             return str(param.Id.IntegerValue)
         except Exception:
-            # Nếu không có, sử dụng id() của đối tượng
             return str(id(param))
 
 
 
 
-    # def ComboBox1SelectedIndexChanged(self, sender, e):
-    #     # Cập nhật trạng thái đã chọn trước khi chuyển group
-    #     for idx, listItem in self.ListViewItems:
-    #         key = self.getParamKey(listItem.Tag)
-    #         if listItem.Checked:
-    #             self.selectedParams.add(key)
-    #         else:
-    #             self.selectedParams.discard(key)
-    #     selectedGroup = self._comboBox1.SelectedItem
-    #     self.LoadParameters(selectedGroup)
+    def ComboBox1SelectedIndexChanged(self, sender, e):
+        # Cập nhật trạng thái đã chọn của các item hiện tại
+        for idx, listItem in self.ListViewItems:
+            key = self.getParamKey(listItem.Tag)
+            if listItem.Checked:
+                self.selectedParams.add(key)
+            else:
+                self.selectedParams.discard(key)
+        # Lấy group được chọn
+        selectedGroup = self._comboBox1.SelectedItem
+        self.LoadParameters(selectedGroup)
 
 
-    # def LoadParameters(self, group):
-    #     self._listView1.BeginUpdate()
-    #     self._listView1.Items.Clear()
-    #     self.ListViewItems = []  # Reset danh sách các item
-    #
-    #     if group == "All":
-    #         params = self.data
-    #     else:
-    #         # Đảm bảo rằng self.valueGroup là dictionary
-    #         params = [self.valueGroup[i] for i,_ in enumerate(self.groupKeys)]
-    #
-    #     for idx, param in enumerate(params):
-    #         key = self.getParamKey(param)
-    #         listItem = System.Windows.Forms.ListViewItem(str(param.Definition.Name))
-    #         listItem.Tag = param
-    #         if key in self.selectedParams:
-    #             listItem.Checked = True
-    #         self._listView1.Items.Add(listItem)
-    #         self.ListViewItems.append((idx, listItem))
-    #     self._listView1.EndUpdate()
+
+    def LoadParameters(self, group):
+        self._listView1.BeginUpdate()
+        self._listView1.Items.Clear()
+        self.ListViewItems = []  # Reset danh sách các item
+
+        if group == "All":
+            params = self.data
+        else:
+            # valueGroup là dictionary chứa danh sách parameter theo group
+            params = self.valueGroup.get(group, [])
+
+        for idx, param in enumerate(params):
+            key = self.getParamKey(param)
+            listItem = System.Windows.Forms.ListViewItem(str(param.Definition.Name))
+            listItem.Tag = param
+            if key in self.selectedParams:
+                listItem.Checked = True
+            self._listView1.Items.Add(listItem)
+            self.ListViewItems.append((idx, listItem))
+        self._listView1.EndUpdate()
 
 
 

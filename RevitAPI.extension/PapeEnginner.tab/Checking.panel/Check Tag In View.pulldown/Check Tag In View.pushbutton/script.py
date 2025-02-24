@@ -190,7 +190,6 @@ def save_config(data):
 if __name__ == "__main__":
     try:
         CONFIG_FILE = os.path.join(os.getenv("APPDATA"), "CheckTagConfig.json")
-        global formInputInstance
 
         annotationCategories = AllAnnotationCategories()
         annotationCategoriesName = [cate.Name for cate in annotationCategories]
