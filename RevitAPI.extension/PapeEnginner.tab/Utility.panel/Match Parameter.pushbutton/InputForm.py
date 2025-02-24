@@ -75,22 +75,30 @@ doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 uidoc = __revit__.ActiveUIDocument
 uiviews = uidoc.GetOpenUIViews()
-jsonFile = os.path.join(os.getenv("APPDATA"), "CheckTagConfig.json")
+jsonFile = os.path.join(os.getenv("APPDATA"), "MatchParameter.json")
 uiview = [x for x in uiviews if x.ViewId == view.Id][0]
 """-------------------------------------------------------------------------------------------"""
-lstSelect = ["Annotation Categories"]
+
 
 
 class InputForm(Form):
-    def __init__(self, data):
+    def __init__(self, data, group, valueGroup):
         self.data = data
+        self.groupKeys = group
+        self.valueGroup = valueGroup
+
         self.allChecked = False  # Trạng thái chọn tất cả
         self.HiddenState = False  # Trạng thái ẩn
         self.HiddenItems = []  # Danh sách chứa các mục bị ẩn
         self.ListViewItems = []  # Danh sách chứa các mục ban đầu
+        self.selectedParams = set()  # Lưu tên các parameter được check
+
 
         self.InitializeComponent()
         self.LoadConfig()
+
+
+
 
     def InitializeComponent(self):
         # Get the directory of the running script
@@ -198,7 +206,8 @@ class InputForm(Form):
         self._comboBox1.Location = System.Drawing.Point(78, 40)
         self._comboBox1.Name = "comboBox1"
         self._comboBox1.Size = System.Drawing.Size(416, 24)
-        self._comboBox1.Items.AddRange(System.Array[System.Object](lstSelect))
+        self._comboBox1.Items.Add("All")
+        self._comboBox1.Items.AddRange(System.Array[System.Object](self.groupKeys))
         self._comboBox1.TabIndex = 2
         self._comboBox1.SelectedIndexChanged += self.ComboBox1SelectedIndexChanged
         #
@@ -218,16 +227,17 @@ class InputForm(Form):
         self._listView1.View = System.Windows.Forms.View.Details
 
         # Sau khi thêm cột vào ListView
-        self._listView1.Columns.Add("Data", 600, System.Windows.Forms.HorizontalAlignment.Left)
+        self._listView1.Columns.Add("Parameters", 600, System.Windows.Forms.HorizontalAlignment.Left)
         # Đăng ký sự kiện Resize để cột luôn chiếm toàn bộ chiều rộng của ListView
         self._listView1.Resize += self.ListViewResize
 
         for idx, item in enumerate(self.data):
-            listItem = System.Windows.Forms.ListViewItem(str(item))
+            listItem = System.Windows.Forms.ListViewItem(str(item.Definition.Name))
             self._listView1.Items.Add(listItem)
             self.ListViewItems.append((idx, listItem))
 
         self._listView1.SelectedIndexChanged += self.ListView1SelectedIndexChanged
+
         #
         # btnCheckUncheck
         #
@@ -353,11 +363,14 @@ class InputForm(Form):
         self._tableLayoutPanel31.ResumeLayout(False)
         self.ResumeLayout(False)
 
+
+
+
+
     def TextBoxFindTextChanged(self, sender, e):
         pass
 
-    def ComboBox1SelectedIndexChanged(self, sender, e):
-        pass
+
 
     def ListView1SelectedIndexChanged(self, sender, e):
         pass
@@ -374,32 +387,79 @@ class InputForm(Form):
     def BtnSaveClick(self, sender, e):
         pass
 
+
+
+    def getParamKey(self, param):
+        try:
+            # Ưu tiên sử dụng thuộc tính Id của parameter nếu có (đã chuyển sang chuỗi)
+            return str(param.Id.IntegerValue)
+        except Exception:
+            # Nếu không có, sử dụng id() của đối tượng
+            return str(id(param))
+
+
+
+
+    # def ComboBox1SelectedIndexChanged(self, sender, e):
+    #     # Cập nhật trạng thái đã chọn trước khi chuyển group
+    #     for idx, listItem in self.ListViewItems:
+    #         key = self.getParamKey(listItem.Tag)
+    #         if listItem.Checked:
+    #             self.selectedParams.add(key)
+    #         else:
+    #             self.selectedParams.discard(key)
+    #     selectedGroup = self._comboBox1.SelectedItem
+    #     self.LoadParameters(selectedGroup)
+
+
+    # def LoadParameters(self, group):
+    #     self._listView1.BeginUpdate()
+    #     self._listView1.Items.Clear()
+    #     self.ListViewItems = []  # Reset danh sách các item
+    #
+    #     if group == "All":
+    #         params = self.data
+    #     else:
+    #         # Đảm bảo rằng self.valueGroup là dictionary
+    #         params = [self.valueGroup[i] for i,_ in enumerate(self.groupKeys)]
+    #
+    #     for idx, param in enumerate(params):
+    #         key = self.getParamKey(param)
+    #         listItem = System.Windows.Forms.ListViewItem(str(param.Definition.Name))
+    #         listItem.Tag = param
+    #         if key in self.selectedParams:
+    #             listItem.Checked = True
+    #         self._listView1.Items.Add(listItem)
+    #         self.ListViewItems.append((idx, listItem))
+    #     self._listView1.EndUpdate()
+
+
+
     def TextBoxFindTextChanged(self, sender, e):
-        # Lấy chuỗi tìm kiếm từ ô textbox, chuyển về chữ thường để so sánh không phân biệt chữ hoa/chữ thường
-        searchStr = self._textBoxFind.Text.lower().strip()
+            # Lấy chuỗi tìm kiếm từ ô textbox, chuyển về chữ thường để so sánh không phân biệt chữ hoa/chữ thường
+            searchStr = self._textBoxFind.Text.lower().strip()
 
-        # Tạm dừng cập nhật giao diện để tránh nháy màn hình khi thay đổi danh sách mục
-        self._listView1.BeginUpdate()
-        # Xoá hết các mục đang hiển thị
-        self._listView1.Items.Clear()
+            # Tạm dừng cập nhật giao diện để tránh nháy màn hình khi thay đổi danh sách mục
+            self._listView1.BeginUpdate()
+            # Xoá hết các mục đang hiển thị
+            self._listView1.Items.Clear()
 
-        if searchStr == "":
-            # Nếu không có chuỗi tìm kiếm (ô trống), khôi phục lại toàn bộ ListView theo thứ tự ban đầu
-            for idx, item in sorted(self.ListViewItems, key=lambda x: x[0]):
-                self._listView1.Items.Add(item)
-        else:
-            # Nếu có chuỗi tìm kiếm, lọc các mục có chứa chuỗi đó trong thuộc tính Text của ListViewItem
-            for idx, item in sorted(self.ListViewItems, key=lambda x: x[0]):
-                # Kiểm tra nếu chuỗi tìm kiếm xuất hiện trong text của item (chuyển về chữ thường để so sánh)
-                # if searchStr in item.Text.lower():
-                if item.Text.lower().startswith(searchStr):
+            if searchStr == "":
+                # Nếu không có chuỗi tìm kiếm (ô trống), khôi phục lại toàn bộ ListView theo thứ tự ban đầu
+                for idx, item in sorted(self.ListViewItems, key=lambda x: x[0]):
                     self._listView1.Items.Add(item)
+            else:
+                # Nếu có chuỗi tìm kiếm, lọc các mục có chứa chuỗi đó trong thuộc tính Text của ListViewItem
+                for idx, item in sorted(self.ListViewItems, key=lambda x: x[0]):
+                    # Kiểm tra nếu chuỗi tìm kiếm xuất hiện trong text của item (chuyển về chữ thường để so sánh)
+                    # if searchStr in item.Text.lower():
+                    if item.Text.lower().startswith(searchStr):
+                        self._listView1.Items.Add(item)
 
-        # Cho phép ListView cập nhật giao diện sau khi thay đổi
-        self._listView1.EndUpdate()
+            # Cho phép ListView cập nhật giao diện sau khi thay đổi
+            self._listView1.EndUpdate()
 
-    def ComboBox1SelectedIndexChanged(self, sender, e):
-        pass
+
 
     def ListView1SelectedIndexChanged(self, sender, e):
         pass
@@ -431,8 +491,6 @@ class InputForm(Form):
                 self._listView1.Items.Add(item)
         self._listView1.EndUpdate()
 
-
-
     def BtnExportClick(self, sender, e):
         itemChecked = [item.Text for item in self._listView1.Items if item.Checked]
         selectedComboBoxItem = self._comboBox1.SelectedItem if self._comboBox1.SelectedItem else ""
@@ -443,7 +501,7 @@ class InputForm(Form):
         }
 
         if len(itemChecked) > 0:
-            fileSave = forms.save_file(file_ext='json',default_name="Data",restore_dir= True,title= "Export Data")
+            fileSave = forms.save_file(file_ext='json', default_name="Data", restore_dir=True, title="Export Data")
 
             if fileSave:
                 try:
@@ -455,7 +513,7 @@ class InputForm(Form):
             else:
                 return
         else:
-            Alert(title="Notification",content="There is no selected category")
+            Alert(title="Notification", content="There is no selected category")
 
     def BtnImportClick(self, sender, e):
         """Chọn file JSON và cập nhật dữ liệu từ file đó vào form."""
@@ -492,8 +550,6 @@ class InputForm(Form):
 
             # Hiển thị thông báo hoàn tất
             Alert(title="Notification", content="Data imported successfully!")
-
-
 
     def ListViewResize(self, sender, e):
         sender.Columns[0].Width = sender.ClientSize.Width
@@ -542,7 +598,6 @@ class InputForm(Form):
             Alert(title="Notification", content="Data was saved")
             self.Close()
 
-
     def SaveConfigSetting(self, data):
         """Lưu config vào file JSON."""
         with open(jsonFile, "w") as f:
@@ -572,20 +627,3 @@ class InputForm(Form):
             if selectedComboBoxItem and selectedComboBoxItem in self._comboBox1.Items:
                 self._comboBox1.SelectedItem = selectedComboBoxItem
 
-
-# if __name__ == "__main__":
-#     def AllAnnotationCategories():
-#         allCategories = doc.Settings.Categories
-#
-#         return [cat for cat in allCategories if cat.CategoryType == CategoryType.Annotation]
-#
-#
-#     annotationCategories = AllAnnotationCategories()
-#     annotationCategoriesName = [cate.Name for cate in annotationCategories]
-#     annotationCategoriesDict = dict(zip(annotationCategoriesName, annotationCategories))
-#     sortedData = sorted(annotationCategoriesName)
-#
-#     # Tạo và hiển thị form
-#     form = InputForm(sortedData)
-#     # Application.Run(form)
-#     form.ShowDialog()

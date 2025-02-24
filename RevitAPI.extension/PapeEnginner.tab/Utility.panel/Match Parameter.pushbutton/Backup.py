@@ -82,10 +82,23 @@ class MyOption(forms.TemplateListItem):
         super(MyOption, self).__init__(orig_item, checked=checked)
         self.item = orig_item  # Lưu trữ danh mục ban đầu
 
+    @property
+    def name(self):
+        return "{}".format(self.item)
 
-@property
-def name(self):
-    return "{}".format(self.item)  # Hiển thị tên danh mục trong danh sách
+# class MyOption(forms.TemplateListItem):
+#     """Class for creating list items in the selection dialog."""
+#
+#     def __init__(self, param, group, checked=False):
+#         """Initialize MyOption with an item, group, and optional checked state."""
+#         super(MyOption, self).__init__(param.Definition.Name, checked=checked)
+#         self.param = param  # Lưu đối tượng Parameter
+#         self.group = group  # Lưu group của parameter
+#
+#     @property
+#     def name(self):
+#         """Hiển thị tên parameter kèm group."""
+#         return "{} ({})".format(self.param.Definition.Name, self.group)
 
 
 def GetParametersInfo(params, version):
@@ -186,14 +199,15 @@ def SelectParameters(params, groupKeys, data):
     previousSelect = config.get('Parameters', [])
 
     # Create a dictionary of parameter names to parameter objects for quick lookup
-    param_dict = {param.Definition.Name: param for param in params}
+    dictParam = {param.Definition.Name: param for param in params}
 
     # Group parameters by their group names
     for i, group in enumerate(groupKeys):
         paramsGroup = data[i]
         ops[group] = [MyOption(param, checked=param in previousSelect) for param in paramsGroup]
 
-    # Add the 'ALL' group containing all parameters
+
+    # Add the Group All
     ops['ALL'] = [MyOption(param.Definition.Name, checked=param.Definition.Name in previousSelect) for param in params]
 
     # Show selection dialog
@@ -210,11 +224,49 @@ def SelectParameters(params, groupKeys, data):
         save_config(newConfig)
 
         # Collect selected parameters from the results
-        for selected_item in res:
-            if selected_item in param_dict:
-                selected_params.append(param_dict[selected_item])
+        for item in res:
+            if item in dictParam:
+                selected_params.append(dictParam[item])
 
     return selected_params
+
+# def SelectParameters(params, groupKeys, data):
+#     """Function to select parameters based on user input with synchronized ALL group."""
+#     ops = {}
+#     config = load_config()
+#     previousSelect = config.get('Parameters', [])
+#
+#     # Dictionary để theo dõi trạng thái checked của từng parameter
+#     selected_state = {param.Definition.Name: param.Definition.Name in previousSelect for param in params}
+#
+#     # Tạo danh sách parameters theo từng group
+#     for group, param_list in zip(groupKeys, data):
+#         ops[group] = [MyOption(param, group, checked=selected_state[param.Definition.Name]) for param in param_list]
+#
+#     # Tạo group 'ALL' chứa tất cả parameters
+#     ops['ALL'] = [MyOption(param, 'ALL', checked=selected_state[param.Definition.Name]) for param in params]
+#
+#     # Hiển thị form chọn
+#     res = forms.SelectFromList.show(ops,
+#                                     title='Select Parameters',
+#                                     group_selector_title='Parameter Group:',
+#                                     multiselect=True)
+#
+#     selected_params = []
+#
+#     if res:
+#         # Cập nhật trạng thái và thu thập các parameters đã chọn
+#         for option in res:
+#             selected_state[option.param.Definition.Name] = True
+#             selected_params.append(option.param)
+#
+#         # Lưu config
+#         newConfig = {"Parameters": [key for key, value in selected_state.items() if value]}
+#         save_config(newConfig)
+#
+#     return selected_params
+
+
 
 
 
