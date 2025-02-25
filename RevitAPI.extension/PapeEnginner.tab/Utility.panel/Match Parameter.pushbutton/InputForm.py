@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-__title__ = 'Settings'
+__title__ = 'Form Get Data'
 __author__ = "Paper Engineer"
 __doc__ = """Version = 1.0
 Date    = 14.02.2025
@@ -233,6 +233,7 @@ class InputForm(Form):
 
         for idx, item in enumerate(self.data):
             listItem = System.Windows.Forms.ListViewItem(str(item.Definition.Name))
+            listItem.Tag = item
             self._listView1.Items.Add(listItem)
             self.ListViewItems.append((idx, listItem))
 
@@ -568,25 +569,30 @@ class InputForm(Form):
         return dialog.Show()
 
     def BtnSaveClick(self, sender, e):
-        """Lưu tất cả các giá trị được chọn, kể cả những mục bị ẩn do bộ lọc tìm kiếm."""
-        allCheckedItems = set()  # Tạo tập hợp để lưu tất cả các mục đã check
+        """Lưu tất cả các parameter đã check (dựa theo ID) vào file JSON."""
+        allCheckedIds = set()  # Tạo tập hợp để lưu ID parameter đã check
 
-        # ✅ Duyệt qua danh sách gốc `ListViewItems` để lấy tất cả các mục
+        # Duyệt qua danh sách gốc `ListViewItems` để lấy tất cả các mục
         for idx, item in self.ListViewItems:
             if item.Checked:
-                allCheckedItems.add(item.Text)  # Lưu lại các mục đã được check
+                # Lấy đối tượng Parameter từ Tag
+                param = item.Tag
+                # Lấy ID (IntegerValue)
+                paramId = param.Id.IntegerValue
+                allCheckedIds.add(paramId)
 
         selectedComboBoxItem = self._comboBox1.SelectedItem if self._comboBox1.SelectedItem else ""
 
+        # Lưu danh sách ID vào config
         configData = {
-            "listViewItem": list(allCheckedItems),  # Lưu tất cả các mục đã check
+            "listViewItemIds": list(allCheckedIds),  # Lưu tất cả ID parameter đã check
             "selectedComboBox": selectedComboBoxItem
         }
 
-        if len(allCheckedItems) == 0:
+        if len(allCheckedIds) == 0:
             warning = self.ShowTaskDialog(
                 "Warning",
-                "The script will be reset and cannot run until you select at least one category tag."
+                "The script will be reset and cannot run until you select at least one parameter tag."
             )
             if warning == TaskDialogResult.Cancel:
                 return
@@ -595,35 +601,43 @@ class InputForm(Form):
                 self.Close()
         else:
             self.SaveConfigSetting(configData)
+            self.DialogResult = System.Windows.Forms.DialogResult.OK
             Alert(title="Notification", content="Data was saved")
             self.Close()
+
 
     def SaveConfigSetting(self, data):
         """Lưu config vào file JSON."""
         with open(jsonFile, "w") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
 
+
+
+
     def LoadConfig(self):
-        """Nạp danh sách các mục đã check từ JSON."""
+        """Nạp danh sách các parameter đã check (theo ID) từ JSON."""
         if not os.path.exists(jsonFile):
+            # Tạo file rỗng nếu chưa có
             with open(jsonFile, "w") as f:
-                json.dump({"listViewItem": []}, f, ensure_ascii=False, indent=4)
-        elif os.path.exists(jsonFile):
+                json.dump({"listViewItemIds": []}, f, ensure_ascii=False, indent=4)
+        else:
             with open(jsonFile, "r") as f:
                 try:
                     config = json.load(f)
                 except json.JSONDecodeError:
                     config = {}
 
-            checkedItems = config.get('listViewItem', [])
+            # Lấy danh sách ID đã lưu
+            checkedIds = config.get('listViewItemIds', [])
             selectedComboBoxItem = config.get('selectedComboBox', "")
 
-            # Kiểm tra và check lại các mục trong ListView nếu chúng nằm trong danh sách đã lưu
+            # Kiểm tra và check lại các mục trong ListView nếu ID của chúng nằm trong checkedIds
             for item in self._listView1.Items:
-                if item.Text in checkedItems:
+                param = item.Tag
+                paramId = param.Id.IntegerValue
+                if paramId in checkedIds:
                     item.Checked = True
 
             # Cập nhật giá trị ComboBox nếu có trong danh sách
             if selectedComboBoxItem and selectedComboBoxItem in self._comboBox1.Items:
                 self._comboBox1.SelectedItem = selectedComboBoxItem
-

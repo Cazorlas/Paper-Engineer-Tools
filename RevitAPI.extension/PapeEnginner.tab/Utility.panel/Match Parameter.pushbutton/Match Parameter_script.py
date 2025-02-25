@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # TODO: Import library and modules
@@ -28,6 +29,7 @@ import Revit  # Loads in the Revit namespace in RevitNodes
 clr.ImportExtensions(Revit.Elements)
 clr.ImportExtensions(Revit.GeometryConversion)
 
+from rpw.ui.forms import Alert
 from InputForm import InputForm
 import System.Windows.Forms
 from System.Windows.Forms import Application
@@ -165,51 +167,6 @@ def GroupElementsByKeys(items, keys, toSort=True):
     # return groupedLists, uniqueKeys
     return groupDict
 
-
-def SelectParameters(params, groupKeys, data):
-    """Function to select parameters based on user input with synchronized ALL group."""
-    f = InputForm(params,groupKeys, data)
-    f.ShowDialog()
-
-
-
-    # ops = {}
-    # # Load previous selections from config
-    # # config = load_config()
-    # # previousSelect = config.get('Parameters', [])
-    #
-    # # Create a dictionary of parameter names to parameter objects for quick lookup
-    # dictParam = {param.Definition.Name: param for param in params}
-    #
-    # # Group parameters by their group names
-    # for i, group in enumerate(groupKeys):
-    #     paramsGroup = data[i]
-    #     ops[group] = [MyOption(param, checked=param in previousSelect) for param in paramsGroup]
-    #
-    #
-    # # Add the Group All
-    # ops['ALL'] = [MyOption(param.Definition.Name, checked=param.Definition.Name in previousSelect) for param in params]
-    #
-    # # Show selection dialog
-    # res = forms.SelectFromList.show(ops,
-    #                                 title='Select Parameters',
-    #                                 group_selector_title='Parameter Group:',
-    #                                 multiselect=True)
-    #
-    # selected_params = []
-    #
-    # if res:
-    #     # Save selections to config for persistence
-    #     newConfig = {"Parameters": res}
-    #     save_config(newConfig)
-    #
-    #     # Collect selected parameters from the results
-    #     for item in res:
-    #         if item in dictParam:
-    #             selected_params.append(dictParam[item])
-    #
-    # return selected_params
-
 def MatchParameterValue(selectedEle, selectedParams):
     """ Match parameter values for selected elements """
     with Transaction(doc, "Match Parameter Value") as t:
@@ -235,6 +192,9 @@ def MatchParameterValue(selectedEle, selectedParams):
 
 """----------------------MAIN CODE----------------------------"""
 try:
+    # Lấy config từ JSON
+    config = load_config()
+    paramsId = config.get('listViewItemIds', [])
 
     # TODO: Select element to get parameter and get parameter to transfer
     # Select an element to get parameters
@@ -248,21 +208,52 @@ try:
     # Sort data into bins
     sortedData = GroupElementsByKeys(params, pGroup, toSort=False)
 
-    # Select parameters based on user input
-    # selectedGetParams = SelectParameters(params, sortedData.keys(), sortedData.values())
-    # if not selectedGetParams:
-    #     sys.exit()
+    # Run 2 options
+    if EXEC_PARAMS.config_mode:
+        if len(paramsId) == 0:
+            Alert(content="Please run non-Shift first to get Parameters", title="Warning", exit=True)
+        else:
+            try:
+                Alert(content="Please run elements to match.", title="Continue...")
+                while True:
+                    selectedParams = []
+                    for p in params:
+                        for id in paramsId:
+                            if id == p.Id.IntegerValue:
+                                selectedParams.append(p)
 
-    f = InputForm(params, list(sortedData.keys()), sortedData)
-    f.ShowDialog()
+                    # TODO: Select element to receive parameter do Transaction
+                    # Select elements to receive parameters
+                    receiveRef = uidoc.Selection.PickObject(ObjectType.Element, 'Select elements to match')
+                    receiveEles = doc.GetElement(receiveRef.ElementId)
 
-    # TODO: Select element to receive parameter do Transaction
-    # Select elements to receive parameters
-    # receiveRef = uidoc.Selection.PickObjects(ObjectType.Element, 'Select elements to match')
-    # receiveEles = [doc.GetElement(ref.ElementId) for ref in receiveRef]
-    #
-    # # Match parameter values
-    # MatchParameterValue(receiveEles, selectedGetParams)
+                    # Match parameter values
+                    MatchParameterValue([receiveEles], selectedParams)
+
+            except Autodesk.Revit.Exceptions.OperationCanceledException:
+                pass
+
+
+    else:
+        f = InputForm(params, list(sortedData.keys()), sortedData)
+        f.ShowDialog()
+
+        if f.DialogResult == System.Windows.Forms.DialogResult.OK:
+            config = load_config()
+            paramsId = config.get('listViewItemIds', [])
+            selectedParams = []
+            for p in params:
+                for id in paramsId:
+                    if id == p.Id.IntegerValue:
+                        selectedParams.append(p)
+
+            # TODO: Select element to receive parameter do Transaction
+            # Select elements to receive parameters
+            receiveRef = uidoc.Selection.PickObjects(ObjectType.Element, 'Select elements to match')
+            receiveEles = [doc.GetElement(ref.ElementId) for ref in receiveRef]
+
+            # Match parameter values
+            MatchParameterValue(receiveEles, selectedParams)
 
 except Autodesk.Revit.Exceptions.OperationCanceledException:
     pass
