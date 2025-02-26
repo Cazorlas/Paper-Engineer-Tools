@@ -356,7 +356,7 @@ class InputForm(Form):
                                         System.Drawing.GraphicsUnit.Point, 0)
         self.KeyPreview = True
         self.Name = "InputForm"
-        self.Text = "Setting Check Tag"
+        self.Text = "Match Parameter"
         self._panel1.ResumeLayout(False)
         self._panel1.PerformLayout()
         self._panel3.ResumeLayout(False)

@@ -214,7 +214,7 @@ try:
             Alert(content="Please run non-Shift first to get Parameters", title="Warning", exit=True)
         else:
             try:
-                Alert(content="Please run elements to match.", title="Continue...")
+                # Alert(content="Please run elements to match.", title="Continue...")
                 while True:
                     selectedParams = []
                     for p in params:
@@ -224,11 +224,12 @@ try:
 
                     # TODO: Select element to receive parameter do Transaction
                     # Select elements to receive parameters
-                    receiveRef = uidoc.Selection.PickObject(ObjectType.Element, 'Select elements to match')
-                    receiveEles = doc.GetElement(receiveRef.ElementId)
+                    with forms.WarningBar(title='Select Elements to Match Parameter'):
+                        receiveRef = uidoc.Selection.PickObject(ObjectType.Element, 'Select elements to match')
+                        receiveEles = doc.GetElement(receiveRef.ElementId)
 
-                    # Match parameter values
-                    MatchParameterValue([receiveEles], selectedParams)
+                        # Match parameter values
+                        MatchParameterValue([receiveEles], selectedParams)
 
             except Autodesk.Revit.Exceptions.OperationCanceledException:
                 pass
@@ -239,6 +240,7 @@ try:
         f.ShowDialog()
 
         if f.DialogResult == System.Windows.Forms.DialogResult.OK:
+
             config = load_config()
             paramsId = config.get('listViewItemIds', [])
             selectedParams = []
@@ -249,11 +251,12 @@ try:
 
             # TODO: Select element to receive parameter do Transaction
             # Select elements to receive parameters
-            receiveRef = uidoc.Selection.PickObjects(ObjectType.Element, 'Select elements to match')
-            receiveEles = [doc.GetElement(ref.ElementId) for ref in receiveRef]
+            with forms.WarningBar(title='Select Elements to Match Parameter'):
+                receiveRef = uidoc.Selection.PickObjects(ObjectType.Element, 'Select elements to match')
+                receiveEles = [doc.GetElement(ref.ElementId) for ref in receiveRef]
 
-            # Match parameter values
-            MatchParameterValue(receiveEles, selectedParams)
+                # Match parameter values
+                MatchParameterValue(receiveEles, selectedParams)
 
 except Autodesk.Revit.Exceptions.OperationCanceledException:
     pass
