@@ -1,9 +1,62 @@
-title: Match Parameter
+title:
+  en_us: Match Parameter
 
-tooltip: >-
-  Match the Parameter from a selected element
-            
+tooltip:
+  en_us: >-          
+    📖 Description
+    
+    
+    This tool allows you to match parameter values between Revit elements.  
+    
+    You can run the tool in two modes:  
+    
+    - **Shift Click Mode:** Match parameters based on previously saved selections.  
+    
+    - **Non-Shift Click Mode:** Select parameters and elements in real-time.  
+    
+    ------------------------------------------------------------------
 
+    🚀 How to Use
+    
+
+    **Non-Shift Click Mode:**  
+    
+    1. Click the tool (without Shift).  
+    
+    2. Select the source element to get parameters.  
+    
+    3. Choose parameters to transfer and click OK. 
+    
+    4. Select target elements to apply the values.  
+    
+
+    **Shift Click Mode:**  
+    
+    1. Configure parameters using Non-Shift mode first.  
+    
+    2. Hold **Shift** and click the tool.  
+    
+    3. Select target elements, and the parameters will be matched automatically.  
+
+    ------------------------------------------------------------------
+
+    ⚠ Warnings & Limitations
+    
+
+    - Parameters must be user-modifiable and not read-only.
+    
+    - Shift Click mode requires prior configuration.  
+    
+    - Only works with visible elements in the active view.  
+
+    ------------------------------------------------------------------
+
+    📜 Copyright & License
+    
+    
+    © 2024 Paper Engineer. All rights reserved.  
+    
+    Please give proper credit if you share or use this script in your project.  
 
 context: 
     any:
