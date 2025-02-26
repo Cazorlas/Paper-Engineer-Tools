@@ -3,13 +3,9 @@
 
 # TODO: Import library and modules
 import clr  # This is .NET's Common Language Runtime.
-import System  # The System namespace at the root of .NET
-import math  # Math library from Python
-import sys
 import json  # Library để lưu và đọc file JSON
 import os  # Library để thao tác với hệ thống file
 
-from System.Collections.Generic import *  # Lets you handle generics.
 from pyrevit import forms, revit, script, EXEC_PARAMS
 
 clr.AddReference('ProtoGeometry')  # A Dynamo library for its proxy geometry class
@@ -33,12 +29,6 @@ from rpw.ui.forms import Alert
 from InputForm import InputForm
 import System.Windows.Forms
 from System.Windows.Forms import Application
-
-clr.AddReference("RevitServices")
-import RevitServices
-from RevitServices.Persistence import DocumentManager  # Tracks the document attached to Dynamo
-from RevitServices.Transactions import TransactionManager  # Manages transactions in Dynamo
-
 """----------------------INPUT----------------------------"""
 # Prepare variable and input
 doc = __revit__.ActiveUIDocument.Document

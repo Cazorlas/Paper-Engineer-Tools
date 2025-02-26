@@ -232,7 +232,9 @@ class InputForm(Form):
         self._listView1.Resize += self.ListViewResize
 
         for idx, item in enumerate(self.data):
-            listItem = System.Windows.Forms.ListViewItem(str(item.Definition.Name))
+            value = self.GetDisplayText(item)
+            listItem = System.Windows.Forms.ListViewItem(value)
+            # listItem = System.Windows.Forms.ListViewItem(str(item.Definition.Name))
             listItem.Tag = item
             self._listView1.Items.Add(listItem)
             self.ListViewItems.append((idx, listItem))
@@ -364,14 +366,8 @@ class InputForm(Form):
         self._tableLayoutPanel31.ResumeLayout(False)
         self.ResumeLayout(False)
 
-
-
-
-
     def TextBoxFindTextChanged(self, sender, e):
         pass
-
-
 
     def ListView1SelectedIndexChanged(self, sender, e):
         pass
@@ -387,17 +383,11 @@ class InputForm(Form):
 
     def BtnSaveClick(self, sender, e):
         pass
-
-
-
     def getParamKey(self, param):
         try:
             return str(param.Id.IntegerValue)
         except Exception:
             return str(id(param))
-
-
-
 
     def ComboBox1SelectedIndexChanged(self, sender, e):
         # Cập nhật trạng thái đã chọn của các item hiện tại
@@ -412,6 +402,25 @@ class InputForm(Form):
         self.LoadParameters(selectedGroup)
 
 
+    def GetDisplayText(self, param):
+        """
+        Trả về chuỗi hiển thị kết hợp giữa tên parameter và giá trị của nó.
+        Nếu không lấy được giá trị, chỉ hiển thị tên parameter.
+        """
+        try:
+            name = param.Definition.Name
+        except Exception:
+            name = str(param)
+        try:
+            value = param.AsValueString()
+            if not value:
+                value = param.AsString()
+        except Exception:
+            value = ""
+        if value:
+            return "{} - {}".format(name, value)
+        else:
+            return name
 
     def LoadParameters(self, group):
         self._listView1.BeginUpdate()
@@ -426,15 +435,15 @@ class InputForm(Form):
 
         for idx, param in enumerate(params):
             key = self.getParamKey(param)
-            listItem = System.Windows.Forms.ListViewItem(str(param.Definition.Name))
+            value = self.GetDisplayText(param)
+            listItem = System.Windows.Forms.ListViewItem(value)
+            # listItem = System.Windows.Forms.ListViewItem(str(param.Definition.Name))
             listItem.Tag = param
             if key in self.selectedParams:
                 listItem.Checked = True
             self._listView1.Items.Add(listItem)
             self.ListViewItems.append((idx, listItem))
         self._listView1.EndUpdate()
-
-
 
     def TextBoxFindTextChanged(self, sender, e):
             # Lấy chuỗi tìm kiếm từ ô textbox, chuyển về chữ thường để so sánh không phân biệt chữ hoa/chữ thường
@@ -538,8 +547,11 @@ class InputForm(Form):
             self.ListViewItems = []  # Reset danh sách gốc
 
             for idx, item in enumerate(self.data):  # Load lại danh sách
-                listItem = System.Windows.Forms.ListViewItem(str(item))
-                listItem.Checked = item in checkedItems  # Check nếu item nằm trong JSON
+                value = self.GetDisplayText(item)
+                listItem = System.Windows.Forms.ListViewItem(value)
+                # listItem = System.Windows.Forms.ListViewItem(str(item))
+                #listItem.Checked = item in checkedItems  # Check nếu item nằm trong JSON
+                listItem.Checked = value in checkedItems  # Check nếu item nằm trong JSON
                 self._listView1.Items.Add(listItem)
                 self.ListViewItems.append((idx, listItem))
 
