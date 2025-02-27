@@ -287,10 +287,28 @@ def GetIntersectingElements(linkInstance, walls, ducts):
         wallsForDuct = []  # Danh sách walls giao cắt với duct
         midpointsForDuct = []  # Danh sách midpoints của duct
         linesForDuct = []
+        wallSolids = []
 
         for wall in walls:
             # wallClosed = CloseWallGeometry(wall)
-            wallSolids = wall.Geometry[opt]
+            # wallSolids = wall.Geometry[opt]
+
+            geometryElement = wall.get_Geometry(opt)
+
+            for geometryObject in geometryElement:
+                if isinstance(geometryObject, Solid):
+                    if geometryObject.Volume > 0 and geometryObject.Faces.Size > 0:
+                        transformedWallSolid = SolidUtils.CreateTransformed(geometryObject, transform)
+                        wallSolids.append(transformedWallSolid)
+
+                elif isinstance(geometryObject, GeometryInstance):
+                    # Lấy hình học từ GeometryInstance
+                    instanceGeometry = geometryObject.GetInstanceGeometry()
+                    for instanceObject in instanceGeometry:
+                        if isinstance(instanceObject, Solid):
+                            if instanceObject.Volume > 0 and instanceObject.Faces.Size > 0:
+                                transformedWallSolid = SolidUtils.CreateTransformed(instanceObject, transform)
+                                wallSolids.append(transformedWallSolid)
 
             # wallSolids = GetElementSolids(wall)
             # intersectingData.append(wallSolids)
@@ -798,6 +816,7 @@ try:
 
             # Create a list of distances
             pts = CurveAtSegmentLength(ductEles, cutLength, unionThickness)
+            # reversedPts = pts[::-1]
 
             lst1Ducts = []
             lst2Ducts = []
