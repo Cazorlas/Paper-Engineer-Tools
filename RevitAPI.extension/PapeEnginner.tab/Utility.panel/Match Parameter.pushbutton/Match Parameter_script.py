@@ -3,13 +3,9 @@
 
 # TODO: Import library and modules
 import clr  # This is .NET's Common Language Runtime.
-import System  # The System namespace at the root of .NET
-import math  # Math library from Python
-import sys
 import json  # Library để lưu và đọc file JSON
 import os  # Library để thao tác với hệ thống file
 
-from System.Collections.Generic import *  # Lets you handle generics.
 from pyrevit import forms, revit, script, EXEC_PARAMS
 
 clr.AddReference('ProtoGeometry')  # A Dynamo library for its proxy geometry class
@@ -33,12 +29,6 @@ from rpw.ui.forms import Alert
 from InputForm import InputForm
 import System.Windows.Forms
 from System.Windows.Forms import Application
-
-clr.AddReference("RevitServices")
-import RevitServices
-from RevitServices.Persistence import DocumentManager  # Tracks the document attached to Dynamo
-from RevitServices.Transactions import TransactionManager  # Manages transactions in Dynamo
-
 """----------------------INPUT----------------------------"""
 # Prepare variable and input
 doc = __revit__.ActiveUIDocument.Document
@@ -214,7 +204,7 @@ try:
             Alert(content="Please run non-Shift first to get Parameters", title="Warning", exit=True)
         else:
             try:
-                Alert(content="Please run elements to match.", title="Continue...")
+                # Alert(content="Please run elements to match.", title="Continue...")
                 while True:
                     selectedParams = []
                     for p in params:
@@ -224,11 +214,12 @@ try:
 
                     # TODO: Select element to receive parameter do Transaction
                     # Select elements to receive parameters
-                    receiveRef = uidoc.Selection.PickObject(ObjectType.Element, 'Select elements to match')
-                    receiveEles = doc.GetElement(receiveRef.ElementId)
+                    with forms.WarningBar(title='Select Elements to Match Parameter'):
+                        receiveRef = uidoc.Selection.PickObject(ObjectType.Element, 'Select elements to match')
+                        receiveEles = doc.GetElement(receiveRef.ElementId)
 
-                    # Match parameter values
-                    MatchParameterValue([receiveEles], selectedParams)
+                        # Match parameter values
+                        MatchParameterValue([receiveEles], selectedParams)
 
             except Autodesk.Revit.Exceptions.OperationCanceledException:
                 pass
@@ -239,6 +230,7 @@ try:
         f.ShowDialog()
 
         if f.DialogResult == System.Windows.Forms.DialogResult.OK:
+
             config = load_config()
             paramsId = config.get('listViewItemIds', [])
             selectedParams = []
@@ -249,11 +241,12 @@ try:
 
             # TODO: Select element to receive parameter do Transaction
             # Select elements to receive parameters
-            receiveRef = uidoc.Selection.PickObjects(ObjectType.Element, 'Select elements to match')
-            receiveEles = [doc.GetElement(ref.ElementId) for ref in receiveRef]
+            with forms.WarningBar(title='Select Elements to Match Parameter'):
+                receiveRef = uidoc.Selection.PickObjects(ObjectType.Element, 'Select elements to match')
+                receiveEles = [doc.GetElement(ref.ElementId) for ref in receiveRef]
 
-            # Match parameter values
-            MatchParameterValue(receiveEles, selectedParams)
+                # Match parameter values
+                MatchParameterValue(receiveEles, selectedParams)
 
 except Autodesk.Revit.Exceptions.OperationCanceledException:
     pass
