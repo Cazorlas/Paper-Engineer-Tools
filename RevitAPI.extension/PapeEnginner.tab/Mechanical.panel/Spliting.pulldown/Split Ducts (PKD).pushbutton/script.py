@@ -214,27 +214,6 @@ def GetDuctTypeShape(shapeType, lstDucts):
 
     return result
 
-
-# def GetElementSolids(element):
-#     solids = []
-#     options = Options()
-#     options.ComputeReferences = True
-#     geometryElement = element.get_Geometry(options)
-#
-#     if geometryElement:
-#         for geometryObject in geometryElement:
-#             if isinstance(geometryObject, Solid):
-#                 if geometryObject.Volume > 0 and geometryObject.Faces.Size > 0:
-#                     solids.append(geometryObject)
-#             elif isinstance(geometryObject, GeometryInstance):
-#                 instanceGeometryElement = geometryObject.GetInstanceGeometry()
-#                 for instanceGeometryObject in instanceGeometryElement:
-#                     if isinstance(instanceGeometryObject, Solid):
-#                         if instanceGeometryObject.Volume > 0 and instanceGeometryObject.Faces.Size > 0:
-#                             solids.append(instanceGeometryObject)
-#     return solids
-
-
 def GetMidPointOfLine(line):
     """
     Lấy điểm giữa (midpoint) của một đường thẳng (line).
@@ -267,6 +246,28 @@ def GetVerticalDucts(lstDucts):
 
     return verticalDucts, otherDucts
 
+def GetElementSolid(element):
+    '''
+    Retrive the Solids of an Element.
+    '''
+    solids = []
+    options = Options()
+    geometry_element = element.get_Geometry(options)
+
+    if geometry_element:
+        for geometry_object in geometry_element:
+            solid = geometry_object if isinstance(geometry_object, Solid) and geometry_object.Volume > 0 else None
+            if solid:
+                solids.append(solid)
+            else:
+                geometry_instance = geometry_object if isinstance(geometry_object, GeometryInstance) else None
+                if geometry_instance:
+                    for instance_geometry_object in geometry_instance.GetInstanceGeometry():
+                        instance_solid = instance_geometry_object if isinstance(instance_geometry_object, Solid) and instance_geometry_object.Volume > 0 else None
+                        if instance_solid:
+                            solids.append(instance_solid)
+
+    return solids
 
 def GetIntersectingElements(linkInstance, walls, ducts):
     intersectingData = []
@@ -293,22 +294,23 @@ def GetIntersectingElements(linkInstance, walls, ducts):
             # wallClosed = CloseWallGeometry(wall)
             # wallSolids = wall.Geometry[opt]
 
-            geometryElement = wall.get_Geometry(opt)
-
-            for geometryObject in geometryElement:
-                if isinstance(geometryObject, Solid):
-                    if geometryObject.Volume > 0 and geometryObject.Faces.Size > 0:
-                        transformedWallSolid = SolidUtils.CreateTransformed(geometryObject, transform)
-                        wallSolids.append(transformedWallSolid)
-
-                elif isinstance(geometryObject, GeometryInstance):
-                    # Lấy hình học từ GeometryInstance
-                    instanceGeometry = geometryObject.GetInstanceGeometry()
-                    for instanceObject in instanceGeometry:
-                        if isinstance(instanceObject, Solid):
-                            if instanceObject.Volume > 0 and instanceObject.Faces.Size > 0:
-                                transformedWallSolid = SolidUtils.CreateTransformed(instanceObject, transform)
-                                wallSolids.append(transformedWallSolid)
+            wallSolids = GetElementSolid(wall)
+            # geometryElement = wall.get_Geometry(opt)
+            #
+            # for geometryObject in geometryElement:
+            #     if isinstance(geometryObject, Solid):
+            #         if geometryObject.Volume > 0 and geometryObject.Faces.Size > 0:
+            #             transformedWallSolid = SolidUtils.CreateTransformed(geometryObject, transform)
+            #             wallSolids.append(transformedWallSolid)
+            #
+            #     elif isinstance(geometryObject, GeometryInstance):
+            #         # Lấy hình học từ GeometryInstance
+            #         instanceGeometry = geometryObject.GetInstanceGeometry()
+            #         for instanceObject in instanceGeometry:
+            #             if isinstance(instanceObject, Solid):
+            #                 if instanceObject.Volume > 0 and instanceObject.Faces.Size > 0:
+            #                     transformedWallSolid = SolidUtils.CreateTransformed(instanceObject, transform)
+            #                     wallSolids.append(transformedWallSolid)
 
             # wallSolids = GetElementSolids(wall)
             # intersectingData.append(wallSolids)
@@ -704,15 +706,6 @@ try:
 
         linkName = f._comboBoxLink.Text
 
-        # print('Auto mode: {}'.format(autoMode))
-        # print('Manual mode: {}'.format(manualMode))
-        # print('Plan Option: {}'.format(planOption))
-        # print('Vertical Option: {}'.format(verticalOption))
-        # print('All Option: {}'.format(allOption))
-        # print('Step Length: {}'.format(stepLength))
-        # print('Offset Wall: {}'.format(offSetWall))
-        # print('Link Name: {}'.format(linkName))
-
         if linkName == "No Link":
             chooseRefLink = None
 
@@ -738,97 +731,91 @@ try:
             else:
                 ducts = ductsEles
 
+            # Check intersections between walls and ducts
+            intersectingData = GetIntersectingElements(chooseRefLink, walls, ducts)
+
+            intersectingDucts, intersectingWalls, intersectingPoints, intersectingLines, notIntersectingDucts = ProcessData(
+                intersectingData)
+
+
 
         elif manualMode:
             # Manual duct selection
             ducts = CollectDuctManual()
 
-        if len(ducts) == 0:
-            TaskDialog.Show("Error", "There is no Selected Ducts")
+            if len(ducts) == 0:
+                TaskDialog.Show("Error", "There is no Selected Ducts")
 
-        # Check intersections between walls and ducts
-        intersectingData = GetIntersectingElements(chooseRefLink, walls, ducts)
+            # Check intersections between walls and ducts
+            intersectingData = GetIntersectingElements(chooseRefLink, walls, ducts)
 
-        # check = []
+            intersectingDucts, intersectingWalls, intersectingPoints, intersectingLines, notIntersectingDucts = ProcessData(
+                intersectingData)
+
+            print(intersectingWalls)
+
+        # with TransactionGroup(doc, "Split Ducts") as tg:
+        #     tg.Start()
+        #     # Process Ducts through the Walls first
+        #     if len(intersectingDucts) > 0 and offSetWall > 0:
+        #         intersectingDuctsValid = GetValidDucts(intersectingDucts, cutLength)
+        #         ductEles = [doc.GetElement(duct.Id) for duct in intersectingDuctsValid]
+        #         intersectingDuctUnion = [GetDuctUnionFamily(duct) for duct in ductEles]
+        #         intersectingUnionThickness = [GetUnionThickness(union) for union in intersectingDuctUnion]
+        #         offSet = offSetWall + (intersectingUnionThickness[0] / 2)
         #
-        # opt = Options()
-        # opt.ComputeReferences = True
+        #         # Process the Points
+        #         lstVector = [l.Direction for lines in intersectingLines for l in lines]
+        #         firstLine = [line[0] for line in intersectingLines]
         #
-        # opt.DetailLevel =ViewDetailLevel.Fine
+        #         # Align lstVector with intersectingPoints
+        #         alignedVectors = AlignData(intersectingPoints, lstVector)
         #
-        # for wall in walls:
-        #     geo = GetWallSolids(wall)
-        #     check.append(geo)
+        #         offsetPoints = GetOffSetPoints(offSet, alignedVectors, intersectingPoints)
+        #         groupedOffsetPoints = GroupOffsetPoints(offsetPoints, intersectingPoints)
+        #         sortPoints = SortPointByLineDirectionNested(firstLine, groupedOffsetPoints)
         #
-        # print(check)
-
-        # print(intersectingData)
-
-        intersectingDucts, intersectingWalls, intersectingPoints, intersectingLines, notIntersectingDucts = ProcessData(
-            intersectingData)
-
-        with TransactionGroup(doc, "Split Ducts") as tg:
-            tg.Start()
-            # Process Ducts through the Walls first
-            if len(intersectingDucts) > 0 and offSetWall > 0:
-                intersectingDuctsValid = GetValidDucts(intersectingDucts, cutLength)
-                ductEles = [doc.GetElement(duct.Id) for duct in intersectingDuctsValid]
-                intersectingDuctUnion = [GetDuctUnionFamily(duct) for duct in ductEles]
-                intersectingUnionThickness = [GetUnionThickness(union) for union in intersectingDuctUnion]
-                offSet = offSetWall + (intersectingUnionThickness[0] / 2)
-
-                # Process the Points
-                lstVector = [l.Direction for lines in intersectingLines for l in lines]
-                firstLine = [line[0] for line in intersectingLines]
-
-                # Align lstVector with intersectingPoints
-                alignedVectors = AlignData(intersectingPoints, lstVector)
-
-                offsetPoints = GetOffSetPoints(offSet, alignedVectors, intersectingPoints)
-                groupedOffsetPoints = GroupOffsetPoints(offsetPoints, intersectingPoints)
-                sortPoints = SortPointByLineDirectionNested(firstLine, groupedOffsetPoints)
-
-                # print(sortPoints)
-
-                # THIS
-                lst1Ducts = []
-                lst2Ducts = []
-                lstAllDucts = []
-
-                for duct, subPoint in zip(intersectingDuctsValid, sortPoints):
-                    lst1Ducts = SplitDuctByPoints(duct, subPoint)
-                    lstAllDucts.append(lst1Ducts)
-                    lst2Ducts = lst1Ducts[1:]
-
-                    for ele1, ele2 in zip(lst1Ducts, lst2Ducts):
-                        CreateFittings(ele1, ele2)
-
-                lstDucts = notIntersectingDucts + flattenLv3(lstAllDucts)
-
-
-            else:
-                lstDucts = notIntersectingDucts
-
-            ductsValid = GetValidDucts(lstDucts, cutLength)
-            ductEles = [doc.GetElement(duct.Id) for duct in ductsValid]
-            ductUnion = [GetDuctUnionFamily(duct) for duct in ductEles]
-            unionThickness = [GetUnionThickness(union) for union in ductUnion]
-
-            # Create a list of distances
-            pts = CurveAtSegmentLength(ductEles, cutLength, unionThickness)
-            # reversedPts = pts[::-1]
-
-            lst1Ducts = []
-            lst2Ducts = []
-
-            for duct, subPoint in zip(ductsValid, pts):
-                lst1Ducts = SplitDuctByPoints(duct, subPoint)
-                lst2Ducts = lst1Ducts[1:]
-
-                for ele1, ele2 in zip(lst1Ducts, lst2Ducts):
-                    CreateFittings(ele1, ele2)
-
-            tg.Assimilate()
+        #         # print(sortPoints)
+        #
+        #         # THIS
+        #         lst1Ducts = []
+        #         lst2Ducts = []
+        #         lstAllDucts = []
+        #
+        #         for duct, subPoint in zip(intersectingDuctsValid, sortPoints):
+        #             lst1Ducts = SplitDuctByPoints(duct, subPoint)
+        #             lstAllDucts.append(lst1Ducts)
+        #             lst2Ducts = lst1Ducts[1:]
+        #
+        #             for ele1, ele2 in zip(lst1Ducts, lst2Ducts):
+        #                 CreateFittings(ele1, ele2)
+        #
+        #         lstDucts = notIntersectingDucts + flattenLv3(lstAllDucts)
+        #
+        #
+        #     else:
+        #         lstDucts = notIntersectingDucts
+        #
+        #     ductsValid = GetValidDucts(lstDucts, cutLength)
+        #     ductEles = [doc.GetElement(duct.Id) for duct in ductsValid]
+        #     ductUnion = [GetDuctUnionFamily(duct) for duct in ductEles]
+        #     unionThickness = [GetUnionThickness(union) for union in ductUnion]
+        #
+        #     # Create a list of distances
+        #     pts = CurveAtSegmentLength(ductEles, cutLength, unionThickness)
+        #     # reversedPts = pts[::-1]
+        #
+        #     lst1Ducts = []
+        #     lst2Ducts = []
+        #
+        #     for duct, subPoint in zip(ductsValid, pts):
+        #         lst1Ducts = SplitDuctByPoints(duct, subPoint)
+        #         lst2Ducts = lst1Ducts[1:]
+        #
+        #         for ele1, ele2 in zip(lst1Ducts, lst2Ducts):
+        #             CreateFittings(ele1, ele2)
+        #
+        #     tg.Assimilate()
 
 
 except Autodesk.Revit.Exceptions.OperationCanceledException:
