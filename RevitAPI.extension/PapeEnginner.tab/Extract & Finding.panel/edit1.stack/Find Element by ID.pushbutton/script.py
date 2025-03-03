@@ -235,7 +235,7 @@ try:
 
 
                     else:
-                        dataForm = DataForm(doc, lstEleId)
+                        dataForm = DataForm(docLink, lstEleId)
                         Application.Run(dataForm)
                         # ShowDataForm(docLink, lstEleId)
                         SelectLinkELementById(docLink, linkSelected, lstEleId)

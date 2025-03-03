@@ -102,31 +102,6 @@ def GetAllInstancesInViewByCategories(categoryList):
 
     return list(filteredElements)
 
-
-# def UpdateSpaceInfo(ele):
-#     roomName = None  # Khởi tạo mặc định
-#     roomNumber = None
-#     space = None
-#     # global phase
-#
-#     with Transaction(doc, "Update Space Info") as t:
-#         t.Start()
-#         lstCheck = []
-#         try:
-#             if isinstance(ele, FamilyInstance):
-#                 phases = doc.Phases
-#                 # phase = phases[phases.Size - 1]
-#
-#                 # Lấy vị trí của FamilyInstance
-#                 space = ele.FromRoom[phase].Id
-#                 # roomName = space.Parameter.__get__(BuiltInParameter.ROOM_NAME).AsString()
-#                 # roomNumber = space.Parameter.__get__(BuiltInParameter.ROOM_NUMBER).AsString()
-#                 # roomName = space.get_Parameter(BuiltInParameter.ROOM_NAME).AsString()
-#                 # roomNumber = space.get_Parameter(BuiltInParameter.ROOM_NUMBER).AsString()
-#
-#
-
-
 def UpdateSpaceInfo(ele):
     """
     Update the "DP Space Name" and "DP Space Number" parameters of a given FamilyInstance based on the associated space.

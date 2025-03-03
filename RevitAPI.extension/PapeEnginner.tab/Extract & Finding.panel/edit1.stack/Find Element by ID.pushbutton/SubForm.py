@@ -175,6 +175,7 @@ class DataForm(Form):
 
         # Create DataGridView and columns
         self._dataGridView1 = System.Windows.Forms.DataGridView()
+        self._dataGridView1.RowHeadersVisible = False
         self._Column1 = System.Windows.Forms.DataGridViewTextBoxColumn()
         self._Column2 = System.Windows.Forms.DataGridViewTextBoxColumn()
         self._Column3 = System.Windows.Forms.DataGridViewButtonColumn()  # Define as ButtonColumn

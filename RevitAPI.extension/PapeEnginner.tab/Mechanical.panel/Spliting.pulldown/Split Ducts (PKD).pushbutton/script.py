@@ -292,9 +292,9 @@ def GetIntersectingElements(linkInstance, walls, ducts):
 
         for wall in walls:
             # wallClosed = CloseWallGeometry(wall)
-            # wallSolids = wall.Geometry[opt]
+            wallSolids = wall.Geometry[opt]
 
-            wallSolids = GetElementSolid(wall)
+            # wallSolids = GetElementSolid(wall)
             # geometryElement = wall.get_Geometry(opt)
             #
             # for geometryObject in geometryElement:
@@ -568,48 +568,101 @@ def SplitDuctByPoints(duct, pts):
         t.Commit()
     return result
 
+def CurveAtSegmentLength(eles, distance, unionThickness, reverseCut=False):
+    """
+    Chia đoạn ống thành các đoạn nhỏ với chiều dài cố định.
+    Nếu reverseCut=True, hướng cắt sẽ được đảo ngược (bắt đầu từ điểm cuối thứ 1).
 
-def CurveAtSegmentLength(eles, distance, unionThickness):
+    :param eles: Danh sách các đối tượng ống.
+    :param distance: Chiều dài mỗi đoạn (ft).
+    :param unionThickness: Độ dày của kết nối (ft).
+    :param reverseCut: Nếu True, cắt từ điểm GetEndPoint(1) về GetEndPoint(0).
+    :return: Danh sách các điểm chia đoạn cho từng ống.
+    """
     result = []
     for ele, thickness in zip(eles, unionThickness):
-        # Get direction of element
-        direct = ele.Location.Curve.Direction
-        startPoint = ele.Location.Curve.GetEndPoint(0)
-        # endPoint = ele.Location.Curve.GetEndPoint(1)
+        if reverseCut:
+            # Nếu cắt đảo, điểm bắt đầu lấy từ EndPoint(1) và hướng là từ EndPoint(1) về EndPoint(0)
+            startPoint = ele.Location.Curve.GetEndPoint(1)
+            direct = ele.Location.Curve.GetEndPoint(0) - ele.Location.Curve.GetEndPoint(1)
+            direct = direct.Normalize()
+        else:
+            # Mặc định: lấy điểm bắt đầu từ EndPoint(0)
+            startPoint = ele.Location.Curve.GetEndPoint(0)
+            direct = ele.Location.Curve.Direction.Normalize()
 
-        # Divide length into pieces
-        length = ele.LookupParameter('Length').AsDouble()  # ft
+        # Lấy chiều dài ống (ft)
+        length = ele.LookupParameter('Length').AsDouble()
+        # Tính số đoạn cắt có thể chia
         section = int(length / (distance + (1 / 304.8)))
+        # Tính đoạn thừa cuối cùng
         lastSectionLength = length - (section * (distance / 304.8) + thickness)
         lstSub = []
-        scale = float(0)
+        scale = 0.0
 
         for i in range(section):
             if i == 0:
-                scale += float(distance) + float(thickness / 2)
-            elif i > 0:
-                scale += float(distance) + float(thickness)
-
-            vectorDist = direct.Multiply(scale)
-            newpoint = startPoint.Add(vectorDist)
+                scale += distance + thickness / 2.0
+            else:
+                scale += distance + thickness
+            newpoint = startPoint.Add(direct.Multiply(scale))
             lstSub.append(newpoint)
 
-        # Handle the last section if it's smaller than 150mm (0.492 ft)
+        # Xử lý đoạn thừa cuối cùng
         if lastSectionLength > 0:
-            if lastSectionLength <= (150 / 304.8):  # 150mm in ft
-                # Add the remaining length to the last segment
+            if lastSectionLength <= (150 / 304.8):  # nếu đoạn thừa nhỏ hơn 150mm
                 if lstSub:
                     lstSub[-1] = lstSub[-1].Add(direct.Multiply(lastSectionLength))
             else:
-                # Create a new segment for the remaining length
                 scale += lastSectionLength
-                vectorDist = direct.Multiply(scale)
-                newpoint = startPoint.Add(vectorDist)
+                newpoint = startPoint.Add(direct.Multiply(scale))
                 lstSub.append(newpoint)
-
         result.append(lstSub)
-
     return result
+
+
+
+# def CurveAtSegmentLength(eles, distance, unionThickness):
+#     result = []
+#     for ele, thickness in zip(eles, unionThickness):
+#         # Get direction of element
+#         direct = ele.Location.Curve.Direction
+#         startPoint = ele.Location.Curve.GetEndPoint(0)
+#         # endPoint = ele.Location.Curve.GetEndPoint(1)
+#
+#         # Divide length into pieces
+#         length = ele.LookupParameter('Length').AsDouble()  # ft
+#         section = int(length / (distance + (1 / 304.8)))
+#         lastSectionLength = length - (section * (distance / 304.8) + thickness)
+#         lstSub = []
+#         scale = float(0)
+#
+#         for i in range(section):
+#             if i == 0:
+#                 scale += float(distance) + float(thickness / 2)
+#             elif i > 0:
+#                 scale += float(distance) + float(thickness)
+#
+#             vectorDist = direct.Multiply(scale)
+#             newpoint = startPoint.Add(vectorDist)
+#             lstSub.append(newpoint)
+#
+#         # Handle the last section if it's smaller than 150mm (0.492 ft)
+#         if lastSectionLength > 0:
+#             if lastSectionLength <= (150 / 304.8):  # 150mm in ft
+#                 # Add the remaining length to the last segment
+#                 if lstSub:
+#                     lstSub[-1] = lstSub[-1].Add(direct.Multiply(lastSectionLength))
+#             else:
+#                 # Create a new segment for the remaining length
+#                 scale += lastSectionLength
+#                 vectorDist = direct.Multiply(scale)
+#                 newpoint = startPoint.Add(vectorDist)
+#                 lstSub.append(newpoint)
+#
+#         result.append(lstSub)
+#
+#     return result
 
 
 # def CurveAtSegmentLength(eles, distance, unionThickness):
@@ -752,70 +805,72 @@ try:
             intersectingDucts, intersectingWalls, intersectingPoints, intersectingLines, notIntersectingDucts = ProcessData(
                 intersectingData)
 
-            print(intersectingWalls)
+            # print(intersectingWalls)
 
-        # with TransactionGroup(doc, "Split Ducts") as tg:
-        #     tg.Start()
-        #     # Process Ducts through the Walls first
-        #     if len(intersectingDucts) > 0 and offSetWall > 0:
-        #         intersectingDuctsValid = GetValidDucts(intersectingDucts, cutLength)
-        #         ductEles = [doc.GetElement(duct.Id) for duct in intersectingDuctsValid]
-        #         intersectingDuctUnion = [GetDuctUnionFamily(duct) for duct in ductEles]
-        #         intersectingUnionThickness = [GetUnionThickness(union) for union in intersectingDuctUnion]
-        #         offSet = offSetWall + (intersectingUnionThickness[0] / 2)
-        #
-        #         # Process the Points
-        #         lstVector = [l.Direction for lines in intersectingLines for l in lines]
-        #         firstLine = [line[0] for line in intersectingLines]
-        #
-        #         # Align lstVector with intersectingPoints
-        #         alignedVectors = AlignData(intersectingPoints, lstVector)
-        #
-        #         offsetPoints = GetOffSetPoints(offSet, alignedVectors, intersectingPoints)
-        #         groupedOffsetPoints = GroupOffsetPoints(offsetPoints, intersectingPoints)
-        #         sortPoints = SortPointByLineDirectionNested(firstLine, groupedOffsetPoints)
-        #
-        #         # print(sortPoints)
-        #
-        #         # THIS
-        #         lst1Ducts = []
-        #         lst2Ducts = []
-        #         lstAllDucts = []
-        #
-        #         for duct, subPoint in zip(intersectingDuctsValid, sortPoints):
-        #             lst1Ducts = SplitDuctByPoints(duct, subPoint)
-        #             lstAllDucts.append(lst1Ducts)
-        #             lst2Ducts = lst1Ducts[1:]
-        #
-        #             for ele1, ele2 in zip(lst1Ducts, lst2Ducts):
-        #                 CreateFittings(ele1, ele2)
-        #
-        #         lstDucts = notIntersectingDucts + flattenLv3(lstAllDucts)
-        #
-        #
-        #     else:
-        #         lstDucts = notIntersectingDucts
-        #
-        #     ductsValid = GetValidDucts(lstDucts, cutLength)
-        #     ductEles = [doc.GetElement(duct.Id) for duct in ductsValid]
-        #     ductUnion = [GetDuctUnionFamily(duct) for duct in ductEles]
-        #     unionThickness = [GetUnionThickness(union) for union in ductUnion]
-        #
-        #     # Create a list of distances
-        #     pts = CurveAtSegmentLength(ductEles, cutLength, unionThickness)
-        #     # reversedPts = pts[::-1]
-        #
-        #     lst1Ducts = []
-        #     lst2Ducts = []
-        #
-        #     for duct, subPoint in zip(ductsValid, pts):
-        #         lst1Ducts = SplitDuctByPoints(duct, subPoint)
-        #         lst2Ducts = lst1Ducts[1:]
-        #
-        #         for ele1, ele2 in zip(lst1Ducts, lst2Ducts):
-        #             CreateFittings(ele1, ele2)
-        #
-        #     tg.Assimilate()
+        with TransactionGroup(doc, "Split Ducts") as tg:
+            tg.Start()
+            # Process Ducts through the Walls first
+            if len(intersectingDucts) > 0 and offSetWall > 0:
+                intersectingDuctsValid = GetValidDucts(intersectingDucts, cutLength)
+                ductEles = [doc.GetElement(duct.Id) for duct in intersectingDuctsValid]
+                intersectingDuctUnion = [GetDuctUnionFamily(duct) for duct in ductEles]
+                intersectingUnionThickness = [GetUnionThickness(union) for union in intersectingDuctUnion]
+                offSet = offSetWall + (intersectingUnionThickness[0] / 2)
+
+                # Process the Points
+                lstVector = [l.Direction for lines in intersectingLines for l in lines]
+                firstLine = [line[0] for line in intersectingLines]
+
+                # Align lstVector with intersectingPoints
+                alignedVectors = AlignData(intersectingPoints, lstVector)
+
+                offsetPoints = GetOffSetPoints(offSet, alignedVectors, intersectingPoints)
+                groupedOffsetPoints = GroupOffsetPoints(offsetPoints, intersectingPoints)
+                sortPoints = SortPointByLineDirectionNested(firstLine, groupedOffsetPoints)
+
+                # print(sortPoints)
+
+                # THIS
+                lst1Ducts = []
+                lst2Ducts = []
+                lstAllDucts = []
+
+                for duct, subPoint in zip(intersectingDuctsValid, sortPoints):
+                    lst1Ducts = SplitDuctByPoints(duct, subPoint)
+                    lstAllDucts.append(lst1Ducts)
+                    lst2Ducts = lst1Ducts[1:]
+
+                    for ele1, ele2 in zip(lst1Ducts, lst2Ducts):
+                        CreateFittings(ele1, ele2)
+
+                lstDucts = notIntersectingDucts + flattenLv3(lstAllDucts)
+
+
+            else:
+                lstDucts = notIntersectingDucts
+
+            ductsValid = GetValidDucts(lstDucts, cutLength)
+            ductEles = [doc.GetElement(duct.Id) for duct in ductsValid]
+            ductUnion = [GetDuctUnionFamily(duct) for duct in ductEles]
+            unionThickness = [GetUnionThickness(union) for union in ductUnion]
+
+            # Create a list of distances
+            # pts = CurveAtSegmentLength(ductEles, cutLength, unionThickness)
+            pts = CurveAtSegmentLength(ductEles, cutLength, unionThickness, reverseCut=False)
+
+            # reversedPts = pts[::-1]
+
+            lst1Ducts = []
+            lst2Ducts = []
+
+            for duct, subPoint in zip(ductsValid, pts):
+                lst1Ducts = SplitDuctByPoints(duct, subPoint)
+                lst2Ducts = lst1Ducts[1:]
+
+                for ele1, ele2 in zip(lst1Ducts, lst2Ducts):
+                    CreateFittings(ele1, ele2)
+
+            tg.Assimilate()
 
 
 except Autodesk.Revit.Exceptions.OperationCanceledException:
