@@ -36,10 +36,12 @@ version = int(app.VersionNumber)
 """ ----------------------MAIN CODE----------------------------"""
 
 try:
-    point = XYZ(0, 0, 0)
-    Visuallize.VisualizePoint(doc,point)
+    # point = XYZ.Zero
+    # Visuallize.VisualizePoint(doc,point)
 
 
+    # vector = XYZ(0,1.5,0)
+    # Visuallize.VisualizeLine(doc,vector)
 
 
 

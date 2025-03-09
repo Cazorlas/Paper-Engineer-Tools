@@ -44,3 +44,19 @@ class Visuallize:
             t.Commit()
 
         return visualizePoint
+
+    @staticmethod
+    def VisualizeLine(doc,vector,origin = XYZ.Zero):
+
+        endPoint = origin + vector
+
+
+
+        with Transaction(doc, "Create Line") as t:
+            t.Start()
+            line = Line.CreateBound(origin, endPoint)
+
+            visualizeLine =  Visuallize.CreateDirectShape(doc, List[GeometryObject]([line]))
+            t.Commit()
+
+        return visualizeLine
