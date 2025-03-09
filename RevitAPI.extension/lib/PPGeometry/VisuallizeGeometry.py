@@ -50,8 +50,6 @@ class Visuallize:
 
         endPoint = origin + vector
 
-
-
         with Transaction(doc, "Create Line") as t:
             t.Start()
             line = Line.CreateBound(origin, endPoint)

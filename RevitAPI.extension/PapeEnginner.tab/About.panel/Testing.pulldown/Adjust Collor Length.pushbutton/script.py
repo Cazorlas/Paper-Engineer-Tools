@@ -62,6 +62,7 @@ try:
     curveDuct = eleDuct.Location.Curve
     pointDuct = curveDuct.GetEndPoint(0)
     axisZ = XYZ.BasisZ
+
     ductPlan = Plane.CreateByNormalAndOrigin(axisZ,pointDuct)
 
 
