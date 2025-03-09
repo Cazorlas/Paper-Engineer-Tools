@@ -8,7 +8,6 @@ import sys
 
 # Import necessary .NET and Revit API libraries
 from System.Collections.Generic import *
-from pyrevit import forms, revit, script
 
 clr.AddReference('ProtoGeometry')  # Dynamo's geometry proxy
 from Autodesk.DesignScript.Geometry import *  # Import everything from Dynamo's geometry
@@ -16,7 +15,9 @@ from Autodesk.DesignScript.Geometry import *  # Import everything from Dynamo's 
 clr.AddReference("RevitAPI")  # Revit API DLLs
 clr.AddReference("RevitAPIUI")  # Revit UI DLLs
 
-import PPGeometry.PPVisualizeGeometry
+# sys.path.append("F:\0. Personal\2. Work\2. Python\RevitAPI\Tools\Paper Engineer\RevitAPI.extension\lib\PPGeometry")
+# import PPGeometry.VisuallizeGeometry
+import VisuallizeGeometry
 
 import Autodesk
 from Autodesk.Revit.DB import *  # Revit API classes
@@ -44,6 +45,9 @@ version = int(app.VersionNumber)
 
 try:
     point = XYZ(0, 0, 0)
+    Visualize.VisualizePoint(doc,point)
+
+
 
 
 

@@ -19,7 +19,7 @@ from Autodesk.Revit.UI.Selection import *
 # unit = doc.GetUnits()
 # version = int(app.VersionNumber)
 """ ----------------------MAIN CODE----------------------------"""
-class PPVisualize:
+class Visualize:
 
     @staticmethod
     def CreateDirectShape(doc, geometryObjects, builtInCategory=BuiltInCategory.OST_GenericModel):
