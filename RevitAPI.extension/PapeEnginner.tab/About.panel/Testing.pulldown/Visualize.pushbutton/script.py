@@ -17,7 +17,8 @@ clr.AddReference("RevitAPIUI")  # Revit UI DLLs
 
 # sys.path.append("F:\0. Personal\2. Work\2. Python\RevitAPI\Tools\Paper Engineer\RevitAPI.extension\lib\PPGeometry")
 # import PPGeometry.VisuallizeGeometry
-import VisuallizeGeometry
+# import VisuallizeGeometry
+
 
 import Autodesk
 from Autodesk.Revit.DB import *  # Revit API classes
