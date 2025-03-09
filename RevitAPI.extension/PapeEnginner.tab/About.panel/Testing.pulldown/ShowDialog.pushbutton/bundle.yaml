@@ -1,13 +1,9 @@
-title: Calculate Volume
+title: ShowDialog
 
 tooltip: >-
-  Calculate the sum of volume (spaces or rooms)
+  ShowDialog
             
 
-context:
-    - any:
-        - rooms
-        - spaces
 
 help_url: "https://www.youtube.com/@paper.engineer"
 

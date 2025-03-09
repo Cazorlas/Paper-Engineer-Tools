@@ -1,11 +1,11 @@
 layout:
   - Set Workset by Picking
   - Config Settings
-  - Draw picture
+  - Get vertical Duct
   - Excel Working
   - Json Working
   - Align to Ceilings
   - Create ShareParameter with Json
   - ShowDialog
   - Select Form Pyrevit Class
-  - Update Space Info
+  - Visualize
