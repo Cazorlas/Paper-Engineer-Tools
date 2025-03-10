@@ -86,47 +86,67 @@ def GetDistanceFromTwoVectors(fromPoint,ToPoint,vectorToMesure = XYZ.BasisZ):
 
 
 
+# def ChangeParaCollor(eleAt, distance):
+#     collorLength = eleAt.LookupParameter("Collar_Length")
+#
+#     if collorLength is None:
+#         raise ValueError("Parameter 'Collar_Length' not found in element.")
+#
+#
+#     currentValue = collorLength.AsDouble()  # Lấy giá trị hiện tại
+#     newValue = currentValue + distance  # Cộng thêm khoảng cách
+#
+#     with Transaction(doc, "Adjust Collar Length") as t:
+#         t.Start()
+#         collorLength.Set(newValue)
+#         t.Commit()
+
 def ChangeParaCollor(eleAt, distance):
     collorLength = eleAt.LookupParameter("Collar_Length")
 
     if collorLength is None:
         raise ValueError("Parameter 'Collar_Length' not found in element.")
 
+    # Chuyển từ Feet → Millimeters
+    distance_mm = UnitUtils.ConvertFromInternalUnits(distance, UnitTypeId.Millimeters)
 
-    currentValue = collorLength.AsDouble()  # Lấy giá trị hiện tại
-    newValue = currentValue + distance  # Cộng thêm khoảng cách
+    currentValue_mm = UnitUtils.ConvertFromInternalUnits(collorLength.AsDouble(), UnitTypeId.Millimeters)
+    newValue_mm = currentValue_mm + distance_mm  # Cộng thêm khoảng cách
+
+    # Chuyển ngược lại sang đơn vị Feet để đặt vào Revit
+    newValue_feet = UnitUtils.ConvertToInternalUnits(newValue_mm, UnitTypeId.Millimeters)
 
     with Transaction(doc, "Adjust Collar Length") as t:
         t.Start()
-        collorLength.Set(newValue)
+        collorLength.Set(newValue_feet)  # Set giá trị đã chuyển về Feet
         t.Commit()
 
 """ ----------------------MAIN CODE----------------------------"""
 
 try:
-    print(unit)
+    # print(unit)
 
-    # with forms.WarningBar(title='Select Reference Duct'):
-    #     lstFilter = ["Ducts"]
-    #     selectedEle = uidoc.Selection.PickObject(ObjectType.Element,FilterSelection(lstFilter))
-    #     eleDuct = doc.GetElement(selectedEle.ElementId)
-    #
-    # pointDuct, planeDuct = PlaneDuct(eleDuct)
-    # # Visualize.VisualizePlane(doc,planeDuct)
-    #
-    # while True:
-    #     with forms.WarningBar(title='Select Reference Air Terminals'):
-    #         lstFilter = ["Air Terminals"]
-    #         selectedEle = uidoc.Selection.PickObject(ObjectType.Element, FilterSelection(lstFilter))
-    #         eleAt = doc.GetElement(selectedEle.ElementId)
-    #
-    #     lstPoint = GetPointOfFamilyInstance(eleAt)
-    #     pointAT = lstPoint[0]
-    #     planeAT = PlaneAirTerminals(pointAT)
-    #
-    #     # Visualize.VisualizePlane(doc,planeAT)
-    #     distance = GetDistanceFromTwoVectors(pointAT,pointDuct)
-    #     ChangeParaCollor(eleAt,distance)
+    with forms.WarningBar(title='Select Reference Duct'):
+        lstFilter = ["Ducts"]
+        selectedEle = uidoc.Selection.PickObject(ObjectType.Element,FilterSelection(lstFilter))
+        eleDuct = doc.GetElement(selectedEle.ElementId)
+
+    pointDuct, planeDuct = PlaneDuct(eleDuct)
+    # Visualize.VisualizePlane(doc,planeDuct)
+
+    while True:
+        with forms.WarningBar(title='Select Reference Air Terminals'):
+            lstFilter = ["Air Terminals"]
+            selectedEle = uidoc.Selection.PickObject(ObjectType.Element, FilterSelection(lstFilter))
+            eleAt = doc.GetElement(selectedEle.ElementId)
+
+        lstPoint = GetPointOfFamilyInstance(eleAt)
+        pointAT = lstPoint[0]
+        planeAT = PlaneAirTerminals(pointAT)
+
+        # Visualize.VisualizePlane(doc,planeAT)
+        distance = GetDistanceFromTwoVectors(pointAT,pointDuct)
+        ChangeParaCollor(eleAt,distance)
 
 
 
