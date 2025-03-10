@@ -22,7 +22,7 @@ from Autodesk.Revit.UI.Selection import *
 # unit = doc.GetUnits()
 # version = int(app.VersionNumber)
 """ ----------------------MAIN CODE----------------------------"""
-class Visuallize:
+class Visualize:
 
     @staticmethod
     def CreateDirectShape(doc, geometryObjects, builtInCategory=BuiltInCategory.OST_GenericModel):
@@ -40,7 +40,7 @@ class Visuallize:
         with Transaction(doc, "Create Points") as t:
             t.Start()
             # Ở đây, chúng ta gọi CreateDirectShape để tạo DirectShape từ danh sách points
-            visualizePoint = Visuallize.CreateDirectShape(doc,List[GeometryObject]([Point.Create(points)]))
+            visualizePoint = Visualize.CreateDirectShape(doc, List[GeometryObject]([Point.Create(points)]))
             t.Commit()
 
         return visualizePoint
@@ -54,7 +54,51 @@ class Visuallize:
             t.Start()
             line = Line.CreateBound(origin, endPoint)
 
-            visualizeLine =  Visuallize.CreateDirectShape(doc, List[GeometryObject]([line]))
+            visualizeLine =  Visualize.CreateDirectShape(doc, List[GeometryObject]([line]))
             t.Commit()
 
         return visualizeLine
+
+    @staticmethod
+    def VisualizePlane(doc, plane, width=5.0, height=5.0, extrusionDepth=0.1):
+        """
+        Hiển thị một mặt phẳng dựa trên đối tượng Plane.
+
+        :param doc: Document của Revit.
+        :param plane: Đối tượng Plane từ Revit (mặt phẳng cần visualize).
+        :param width: Chiều rộng mặt phẳng.
+        :param height: Chiều cao mặt phẳng.
+        :param extrusionDepth: Độ dày của mặt phẳng (đùn theo normal của plane).
+        """
+
+        with Transaction(doc, "Create Plane") as t:
+            t.Start()
+
+            # Lấy gốc tọa độ của plane
+            origin = plane.Origin
+            xVec = plane.XVec.Normalize() * width  # Vector X có độ dài width
+            yVec = plane.YVec.Normalize() * height  # Vector Y có độ dài height
+            zVec = plane.Normal.Normalize() * extrusionDepth  # Vector Z theo normal
+
+            # Xác định 4 điểm của hình chữ nhật trên plane
+            p1 = origin
+            p2 = origin + xVec
+            p3 = origin + xVec + yVec
+            p4 = origin + yVec
+
+            # Tạo biên dạng (CurveLoop)
+            loop = CurveLoop()
+            loop.Append(Line.CreateBound(p1, p2))
+            loop.Append(Line.CreateBound(p2, p3))
+            loop.Append(Line.CreateBound(p3, p4))
+            loop.Append(Line.CreateBound(p4, p1))
+
+            # Tạo Solid bằng cách Extrude hình chữ nhật theo hướng của plane.Normal
+            solid = GeometryCreationUtilities.CreateExtrusionGeometry([loop], zVec, extrusionDepth)
+
+            # Hiển thị mặt phẳng trong Revit
+            visualizePlane = Visualize.CreateDirectShape(doc, List[GeometryObject]([solid]))
+
+            t.Commit()
+
+        return visualizePlane

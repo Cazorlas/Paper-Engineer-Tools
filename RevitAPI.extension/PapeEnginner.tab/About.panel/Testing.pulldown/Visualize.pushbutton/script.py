@@ -37,14 +37,23 @@ version = int(app.VersionNumber)
 
 try:
     # point = XYZ.Zero
-    # Visuallize.VisualizePoint(doc,point)
+    # Visuallize.Visualize(doc,point)
 
 
     # vector = XYZ(0,1.5,0)
-    # Visuallize.VisualizeLine(doc,vector)
+    # Visuallize.Visualize(doc,vector)
 
 
+    selectedEle = uidoc.Selection.PickObject(ObjectType.Element,"Select An Element")
+    ele = doc.GetElement(selectedEle.ElementId)
 
+    curve = ele.Location.Curve
+    point = curve.GetEndPoint(0)
+    axisZ = XYZ.BasisZ
+
+    plane = Plane.CreateByNormalAndOrigin(axisZ,point)
+
+    Visualize.VisualizePlane(doc,plane)
 
 
 

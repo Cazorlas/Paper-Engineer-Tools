@@ -3,6 +3,7 @@
 
 
 import clr  # Common Language Runtime for .NET
+
 clr.AddReference("RevitAPI")  # Revit API DLLs
 clr.AddReference("RevitAPIUI")  # Revit UI DLLs
 
@@ -28,6 +29,7 @@ clr.ImportExtensions(Revit.Elements)
 clr.ImportExtensions(Revit.GeometryConversion)
 
 from PPSelection.SelectionFilter import *
+from PPGeometry.VisuallizeGeometry import *
 
 clr.AddReference("RevitServices")
 import RevitServices
@@ -47,26 +49,89 @@ version = int(app.VersionNumber)
 """ ----------------------FUNCTIONS----------------------------"""
 
 
+def PlaneDuct(eleDuct, axis=XYZ.BasisZ):
+    curveDuct = eleDuct.Location.Curve
+    pointDuct = curveDuct.GetEndPoint(0)
+
+    planeDuct = Plane.CreateByNormalAndOrigin(axis, pointDuct)
+
+    return pointDuct,planeDuct
 
 
+def GetPointOfFamilyInstance(family):
+    points = []
+
+    try:
+        connectors = family.MEPModel.ConnectorManager.Connectors
+    except:
+        try:
+            connectors = family.ConnectorManager.Connectors
+        except:
+            points.append(None)
+        return points
+
+    for conn in connectors:
+        points.append(conn.Origin)
+
+    return points
+
+def PlaneAirTerminals(pointAT, axis=XYZ.BasisZ):
+    return Plane.CreateByNormalAndOrigin(axis, pointAT)
+
+def GetDistanceFromTwoVectors(fromPoint,ToPoint,vectorToMesure = XYZ.BasisZ):
+    vectorBtw = ToPoint - fromPoint
+    distance = vectorBtw.DotProduct(vectorToMesure)
+
+    return distance
+
+
+
+def ChangeParaCollor(eleAt, distance):
+    collorLength = eleAt.LookupParameter("Collar_Length")
+
+    if collorLength is None:
+        raise ValueError("Parameter 'Collar_Length' not found in element.")
+
+
+    currentValue = collorLength.AsDouble()  # Lấy giá trị hiện tại
+    newValue = currentValue + distance  # Cộng thêm khoảng cách
+
+    with Transaction(doc, "Adjust Collar Length") as t:
+        t.Start()
+        collorLength.Set(newValue)
+        t.Commit()
 
 """ ----------------------MAIN CODE----------------------------"""
 
 try:
+    print(unit)
 
-    with forms.WarningBar(title='Select Reference Duct'):
-        lstFilter = ["Ducts"]
-        selectedDuct = uidoc.Selection.PickObject(ObjectType.Element,FilterSelection(lstFilter))
-        eleDuct = doc.GetElement(selectedDuct.ElementId)
+    # with forms.WarningBar(title='Select Reference Duct'):
+    #     lstFilter = ["Ducts"]
+    #     selectedEle = uidoc.Selection.PickObject(ObjectType.Element,FilterSelection(lstFilter))
+    #     eleDuct = doc.GetElement(selectedEle.ElementId)
+    #
+    # pointDuct, planeDuct = PlaneDuct(eleDuct)
+    # # Visualize.VisualizePlane(doc,planeDuct)
+    #
+    # while True:
+    #     with forms.WarningBar(title='Select Reference Air Terminals'):
+    #         lstFilter = ["Air Terminals"]
+    #         selectedEle = uidoc.Selection.PickObject(ObjectType.Element, FilterSelection(lstFilter))
+    #         eleAt = doc.GetElement(selectedEle.ElementId)
+    #
+    #     lstPoint = GetPointOfFamilyInstance(eleAt)
+    #     pointAT = lstPoint[0]
+    #     planeAT = PlaneAirTerminals(pointAT)
+    #
+    #     # Visualize.VisualizePlane(doc,planeAT)
+    #     distance = GetDistanceFromTwoVectors(pointAT,pointDuct)
+    #     ChangeParaCollor(eleAt,distance)
 
-    curveDuct = eleDuct.Location.Curve
-    pointDuct = curveDuct.GetEndPoint(0)
-    axisZ = XYZ.BasisZ
-
-    ductPlan = Plane.CreateByNormalAndOrigin(axisZ,pointDuct)
 
 
-    print(ductPlan)
+
+
 
 except Autodesk.Revit.Exceptions.OperationCanceledException:
     pass
