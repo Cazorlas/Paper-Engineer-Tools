@@ -146,7 +146,10 @@ try:
 
         # Visualize.VisualizePlane(doc,planeAT)
         distance = GetDistanceFromTwoVectors(pointAT,pointDuct)
-        ChangeParaCollor(eleAt,distance)
+        with TransactionGroup(doc,"Adjust Collor Length") as tg:
+            tg.Start()
+            ChangeParaCollor(eleAt,distance)
+            tg.Assimilate()
 
 
 
