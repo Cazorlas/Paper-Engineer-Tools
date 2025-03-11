@@ -55,7 +55,7 @@ def PlaneDuct(eleDuct, axis=XYZ.BasisZ):
 
     planeDuct = Plane.CreateByNormalAndOrigin(axis, pointDuct)
 
-    return pointDuct,planeDuct
+    return pointDuct, planeDuct
 
 
 def GetPointOfFamilyInstance(family):
@@ -75,15 +75,16 @@ def GetPointOfFamilyInstance(family):
 
     return points
 
+
 def PlaneAirTerminals(pointAT, axis=XYZ.BasisZ):
     return Plane.CreateByNormalAndOrigin(axis, pointAT)
 
-def GetDistanceFromTwoVectors(fromPoint,ToPoint,vectorToMesure = XYZ.BasisZ):
+
+def GetDistanceFromTwoVectors(fromPoint, ToPoint, vectorToMesure=XYZ.BasisZ):
     vectorBtw = ToPoint - fromPoint
     distance = vectorBtw.DotProduct(vectorToMesure)
 
     return distance
-
 
 
 # def ChangeParaCollor(eleAt, distance):
@@ -116,10 +117,13 @@ def ChangeParaCollor(eleAt, distance):
     # Chuyển ngược lại sang đơn vị Feet để đặt vào Revit
     newValue_feet = UnitUtils.ConvertToInternalUnits(newValue, UnitTypeId.Millimeters)
 
-    with Transaction(doc, "Adjust Collar Length") as t:
-        t.Start()
-        collorLength.Set(newValue_feet)  # Set giá trị đã chuyển về Feet
-        t.Commit()
+    # Implementing
+    collorLength.Set(newValue_feet)  # Set giá trị đã chuyển về Feet
+    # with Transaction(doc, "Adjust Collar Length") as t:
+    #     t.Start()
+    #     collorLength.Set(newValue_feet)  # Set giá trị đã chuyển về Feet
+    #     t.Commit()
+
 
 """ ----------------------MAIN CODE----------------------------"""
 
@@ -128,36 +132,42 @@ try:
 
     with forms.WarningBar(title='Select Reference Duct'):
         lstFilter = ["Ducts"]
-        selectedEle = uidoc.Selection.PickObject(ObjectType.Element,FilterSelection(lstFilter))
+        selectedEle = uidoc.Selection.PickObject(ObjectType.Element, FilterSelection(lstFilter))
         eleDuct = doc.GetElement(selectedEle.ElementId)
 
     pointDuct, planeDuct = PlaneDuct(eleDuct)
     # Visualize.VisualizePlane(doc,planeDuct)
 
-    while True:
-        with forms.WarningBar(title='Select Reference Air Terminals'):
-            lstFilter = ["Air Terminals"]
-            selectedEle = uidoc.Selection.PickObject(ObjectType.Element, FilterSelection(lstFilter))
-            eleAt = doc.GetElement(selectedEle.ElementId)
+    lstFilter = ["Air Terminals"]
+    with forms.WarningBar(title='Select Reference Air Terminals'):
+        # Sử dụng TransactionGroup để nhóm tất cả các thay đổi
+        with TransactionGroup(doc, "Adjust All Collar Lengths") as tg:
+            tg.Start()  # Bắt đầu TransactionGroup
 
-        lstPoint = GetPointOfFamilyInstance(eleAt)
-        pointAT = lstPoint[0]
-        planeAT = PlaneAirTerminals(pointAT)
+            while True:
+                try:
+                    selectedEle = uidoc.Selection.PickObject(ObjectType.Element, FilterSelection(lstFilter))
+                    eleAt = doc.GetElement(selectedEle.ElementId)
 
-        # Visualize.VisualizePlane(doc,planeAT)
-        distance = GetDistanceFromTwoVectors(pointAT,pointDuct)
-        with TransactionGroup(doc,"Adjust Collor Length") as tg:
-            tg.Start()
-            ChangeParaCollor(eleAt,distance)
-            tg.Assimilate()
+                    lstPoint = GetPointOfFamilyInstance(eleAt)
+                    pointAT = lstPoint[0]
+                    planeAT = PlaneAirTerminals(pointAT)
 
+                    distance = GetDistanceFromTwoVectors(pointAT, pointDuct)
 
+                    # Sử dụng Transaction cho từng thay đổi
+                    with Transaction(doc, "Adjust Collar Length") as t:
+                        t.Start()
+                        ChangeParaCollor(eleAt, distance)
+                        t.Commit()
 
+                except Autodesk.Revit.Exceptions.OperationCanceledException:
+                    break  # Thoát vòng lặp khi người dùng hủy chọn
 
-
+            tg.Assimilate()  # Kết thúc TransactionGroup, tất cả thay đổi được nhóm lại
 
 except Autodesk.Revit.Exceptions.OperationCanceledException:
     pass
 
 except Exception as ex:
-    TaskDialog.Show("Error", "Warning: {}".format(ex))  # Corrected string formatting
+    TaskDialog.Show("Error", "Warning: {}".format(ex))
