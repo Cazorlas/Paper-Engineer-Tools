@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="RevitAPI 2023" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="RevitAPI 2023" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Revit API" project-jdk-type="Python SDK" />
 </project>
