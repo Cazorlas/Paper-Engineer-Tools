@@ -108,13 +108,13 @@ def ChangeParaCollor(eleAt, distance):
         raise ValueError("Parameter 'Collar_Length' not found in element.")
 
     # Chuyển từ Feet → Millimeters
-    distance_mm = UnitUtils.ConvertFromInternalUnits(distance, UnitTypeId.Millimeters)
+    distance = UnitUtils.ConvertFromInternalUnits(distance, UnitTypeId.Millimeters)
 
-    currentValue_mm = UnitUtils.ConvertFromInternalUnits(collorLength.AsDouble(), UnitTypeId.Millimeters)
-    newValue_mm = currentValue_mm + distance_mm  # Cộng thêm khoảng cách
+    currentValue = UnitUtils.ConvertFromInternalUnits(collorLength.AsDouble(), UnitTypeId.Millimeters)
+    newValue = currentValue + distance  # Cộng thêm khoảng cách
 
     # Chuyển ngược lại sang đơn vị Feet để đặt vào Revit
-    newValue_feet = UnitUtils.ConvertToInternalUnits(newValue_mm, UnitTypeId.Millimeters)
+    newValue_feet = UnitUtils.ConvertToInternalUnits(newValue, UnitTypeId.Millimeters)
 
     with Transaction(doc, "Adjust Collar Length") as t:
         t.Start()
