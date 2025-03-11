@@ -87,20 +87,7 @@ def GetDistanceFromTwoVectors(fromPoint, ToPoint, vectorToMesure=XYZ.BasisZ):
     return distance
 
 
-# def ChangeParaCollor(eleAt, distance):
-#     collorLength = eleAt.LookupParameter("Collar_Length")
-#
-#     if collorLength is None:
-#         raise ValueError("Parameter 'Collar_Length' not found in element.")
-#
-#
-#     currentValue = collorLength.AsDouble()  # Lấy giá trị hiện tại
-#     newValue = currentValue + distance  # Cộng thêm khoảng cách
-#
-#     with Transaction(doc, "Adjust Collar Length") as t:
-#         t.Start()
-#         collorLength.Set(newValue)
-#         t.Commit()
+
 
 def ChangeParaCollor(eleAt, distance):
     collorLength = eleAt.LookupParameter("Collar_Length")
