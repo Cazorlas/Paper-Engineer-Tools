@@ -89,26 +89,26 @@ def GetDistanceFromTwoVectors(fromPoint, ToPoint, vectorToMesure=XYZ.BasisZ):
 
 
 
-def ChangeParaCollor(eleAt, distance):
-    collorLength = eleAt.LookupParameter("Collar_Length")
+def ChangeParaCollar(eleAt, distance):
+    collarLength = eleAt.LookupParameter("Collar_Length")
 
-    if collorLength is None:
+    if collarLength is None:
         raise ValueError("Parameter 'Collar_Length' not found in element.")
 
     # Chuyển từ Feet → Millimeters
     distance = UnitUtils.ConvertFromInternalUnits(distance, UnitTypeId.Millimeters)
 
-    currentValue = UnitUtils.ConvertFromInternalUnits(collorLength.AsDouble(), UnitTypeId.Millimeters)
+    currentValue = UnitUtils.ConvertFromInternalUnits(collarLength.AsDouble(), UnitTypeId.Millimeters)
     newValue = currentValue + distance  # Cộng thêm khoảng cách
 
     # Chuyển ngược lại sang đơn vị Feet để đặt vào Revit
     newValue_feet = UnitUtils.ConvertToInternalUnits(newValue, UnitTypeId.Millimeters)
 
     # Implementing
-    collorLength.Set(newValue_feet)  # Set giá trị đã chuyển về Feet
+    collarLength.Set(newValue_feet)  # Set giá trị đã chuyển về Feet
     # with Transaction(doc, "Adjust Collar Length") as t:
     #     t.Start()
-    #     collorLength.Set(newValue_feet)  # Set giá trị đã chuyển về Feet
+    #     collarLength.Set(newValue_feet)  # Set giá trị đã chuyển về Feet
     #     t.Commit()
 
 
@@ -145,7 +145,7 @@ try:
                     # Sử dụng Transaction cho từng thay đổi
                     with Transaction(doc, "Adjust Collar Length") as t:
                         t.Start()
-                        ChangeParaCollor(eleAt, distance)
+                        ChangeParaCollar(eleAt, distance)
                         t.Commit()
 
                 except Autodesk.Revit.Exceptions.OperationCanceledException:
