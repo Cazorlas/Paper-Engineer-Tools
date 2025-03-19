@@ -140,36 +140,6 @@ def GetWalls(refLinkInstance):
     """
     lstwalls = []
 
-    # parId = ElementId(BuiltInParameter.ELEM_FAMILY_PARAM)
-    # fRule = List[FilterRule]()
-    # fRule.Add(ParameterFilterRuleFactory.CreateContainsRule(parId, 'Basic Wall', True))
-    # fRule.Add(ParameterFilterRuleFactory.CreateContainsRule(parId, 'Stacked Wall', True))
-    # filterWalls = ElementParameterFilter(fRule)
-
-    # Tạo các quy tắc lọc cho Basic Wall và Stacked Wall
-    # ruleBasicWall = ParameterFilterRuleFactory.CreateContainsRule(parId, "Basic Wall", True)
-    # ruleStackedWall = ParameterFilterRuleFactory.CreateContainsRule(parId, "Stacked Wall", True)
-    #
-    # # Kết hợp các quy tắc bằng LogicalOrFilter
-    # filterWalls = LogicalOrFilter(ElementParameterFilter(ruleBasicWall), ElementParameterFilter(ruleStackedWall))
-
-    # paraId = ElementId(BuiltInParameter.WALL_STRUCTURAL_USAGE_PARAM)
-    # Tạo bộ lọc tường Basic Wall và Stacked Wall dựa trên loại
-    # basicWallFilter = ElementParameterFilter(
-    #     ParameterFilterRuleFactory.CreateEqualsRule(
-    #         paraId, int(WallKind.Basic)
-    #     )
-    # )
-    #
-    # stackedWallFilter = ElementParameterFilter(
-    #     ParameterFilterRuleFactory.CreateEqualsRule(
-    #         paraId, int(WallKind.Stacked)
-    #     )
-    # )
-    #
-    # # Kết hợp bộ lọc để lấy Basic Wall và Stacked Wall
-    # wallFilter = LogicalOrFilter(basicWallFilter, stackedWallFilter)
-
     if refLinkInstance is None:
         # Thu thập tường từ tài liệu hiện tại
         refwalls = FilteredElementCollector(doc, view.Id).OfCategory(
