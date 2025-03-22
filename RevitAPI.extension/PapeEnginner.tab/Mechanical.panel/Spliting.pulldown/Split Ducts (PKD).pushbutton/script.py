@@ -263,6 +263,11 @@ def GetIntersectingElements(linkInstance, walls, ducts):
         for wall in walls:
             # wallClosed = CloseWallGeometry(wall)
             wallSolids = wall.Geometry[opt]
+            # geometryElements = wall.get_Geometry(opt)
+            #
+            # for geo in geometryElements:
+            #     if isinstance(geo, Solid):
+            #         wallSolids.append(geo)
 
             # wallSolids = GetElementSolid(wall)
             # geometryElement = wall.get_Geometry(opt)
