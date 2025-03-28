@@ -258,7 +258,7 @@ def GetIntersectingElements(linkInstance, walls, ducts):
         wallsForDuct = []  # Danh sách walls giao cắt với duct
         midpointsForDuct = []  # Danh sách midpoints của duct
         linesForDuct = []
-        wallSolids = []
+        wallSolids = [],
 
         for wall in walls:
             # wallClosed = CloseWallGeometry(wall)
